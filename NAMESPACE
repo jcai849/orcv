@@ -1,0 +1,2 @@
+# useDynLib(orcv,
+#           C_make_queue, C_push, C_pop)
