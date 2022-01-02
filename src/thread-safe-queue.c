@@ -77,6 +77,16 @@ int rm_ts_queue(struct TSQueue *queue)
     int status;
 
     status  = rm_queue(queue->queue);
+    if (pthread_cond_destroy(queue->non_empty) != 0) {
+        perror(NULL);
+        abort();
+    }
+    free(queue->non_empty);
+    if (pthread_mutex_destroy(queue->mutex) != 0) {
+        perror(NULL);
+        abort();
+    }
+    free(queue->mutex);
     free(queue);
     return status;
 }
