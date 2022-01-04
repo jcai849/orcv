@@ -5,7 +5,7 @@ struct Inputs *make_inputs(void)
     struct Inputs *inputs;
     int i;
 
-    if ((inputs = malloc(sizeof(struct Inputs))) == NULL) {
+    if ((inputs = malloc(sizeof(*inputs))) == NULL) {
         perror(NULL);
         abort();
     }
@@ -37,7 +37,7 @@ int add_queue(struct Inputs *inputs, EventQueue *queue)
     EventQueueNode *node;
 
     add_fd(inputs, queue->fd[0]);
-    if ((node = malloc(sizeof(node))) == NULL) {
+    if ((node = malloc(sizeof(*node))) == NULL) {
         perror(NULL);
         abort();
     }

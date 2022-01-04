@@ -3,7 +3,7 @@
 struct Queue *make_queue(void)
 {
     struct Queue *queue;
-    if ((queue = malloc(sizeof(struct Queue))) == NULL) {
+    if ((queue = malloc(sizeof(*queue))) == NULL) {
         perror(NULL);
         abort();
     }
@@ -36,7 +36,7 @@ int push_queue(struct Queue *queue, void *pdata)
 {
     struct Node *node;
 
-    if ((node = malloc(sizeof(struct Node))) == NULL) {
+    if ((node = malloc(sizeof(*node))) == NULL) {
         perror(NULL);
         abort();
     }

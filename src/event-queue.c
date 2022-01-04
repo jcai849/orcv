@@ -5,7 +5,7 @@ struct EventQueue *make_event_queue(void)
 {
     struct EventQueue *queue;
 
-    if ((queue = malloc(sizeof(struct EventQueue))) == NULL) {
+    if ((queue = malloc(sizeof(*queue))) == NULL) {
         perror(NULL);
         abort();
     }

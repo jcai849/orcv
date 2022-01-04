@@ -9,7 +9,6 @@
 #include "inputs.h"
 #include "comms.h"
 
-#define NTHREADS 4
 #define MAX_RECV_SIZE (1024*1024*128)
 #define MAX_SEND_SIZE (1024*1024*128)
 #define BACKLOG 10
@@ -24,7 +23,7 @@ struct ReceiverArg {
     EventQueue *event_queue;
 };
 
-char *itoa(int num)
+char *itoa(int num) // Must free returned val
 {
     char *string_form;
     int length;
@@ -77,7 +76,7 @@ Message *receive(int fd)
                 i += n;
             }
         }
-        if ((msg = malloc(sizeof(Message))) == NULL) {
+        if ((msg = malloc(sizeof(*msg))) == NULL) {
             perror(NULL);
             abort();
         }
@@ -143,7 +142,7 @@ int send_data(char *addr, int port, Data *data) // must free data afterwards
         abort();
     }
 
-    if ((msg = malloc(sizeof(msg))) == NULL) {
+    if ((msg = malloc(sizeof(*msg))) == NULL) {
         perror(NULL);
         abort();
     }
@@ -199,7 +198,7 @@ void *listener(void *arg)
             perror(NULL);
             abort();
         }
-        queued_fd = malloc(sizeof(int));
+        queued_fd = malloc(sizeof(*queued_fd));
         push_ts_queue(((struct ListenerArg *) arg)->ts_queue, queued_fd);
     }
     free(((struct ListenerArg *) arg));
@@ -221,35 +220,44 @@ void *receiver(void *arg)
     free(arg);
 }
 
-Inputs *start(int port)
+Inputs *start(int port, int threads)
 {
     struct ListenerArg *listener_arg;
     struct ReceiverArg *receiver_arg;
     TSQueue *ts_queue;
     EventQueue *event_queue;
-    pthread_t listener_thread, receiver_thread[NTHREADS];
+    pthread_t *listener_thread, *receiver_threads;
     int i;
     Inputs *inputs;
 
     ts_queue = make_ts_queue();
     event_queue = make_event_queue();
 
-    if ((listener_arg = malloc(sizeof(listener_arg))) == NULL) {
+    if ((listener_arg = malloc(sizeof(*listener_arg))) == NULL) {
         perror(NULL);
         abort();
     }
     listener_arg->port = port;
     listener_arg->ts_queue = ts_queue;
-    if ((receiver_arg = malloc(sizeof(receiver_arg))) == NULL) {
+    if ((receiver_arg = malloc(sizeof(*receiver_arg))) == NULL) {
         perror(NULL);
         abort();
     }
     receiver_arg->ts_queue = ts_queue;
     receiver_arg->event_queue = event_queue;
 
-    pthread_create(&listener_thread, NULL, listener, listener_arg);
-    for (i = 0; i < NTHREADS; i++) {
-        pthread_create(&(receiver_thread[i]), NULL, receiver, receiver_arg);
+    if ((listener_thread = malloc(sizeof(*listener_thread))) == NULL) {
+        perror(NULL);
+        abort();
+    }
+    pthread_create(listener_thread, NULL, listener, listener_arg);
+
+    if ((receiver_threads = malloc(sizeof(*receiver_threads) * threads)) == NULL) {
+        perror(NULL);
+        abort();
+    }
+    for (i = 0; i < threads; i++) {
+        pthread_create(&(receiver_threads[i]), NULL, receiver, receiver_arg);
     }
 
     inputs = make_inputs();

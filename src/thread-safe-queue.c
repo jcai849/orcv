@@ -4,13 +4,13 @@ struct TSQueue *make_ts_queue(void)
 {
   struct TSQueue *queue;
 
-  if ((queue = malloc(sizeof(struct TSQueue))) == NULL) {
+  if ((queue = malloc(sizeof(*queue))) == NULL) {
     perror(NULL);
     abort();
   }
   queue->queue = make_queue();
 
-  if ((queue->mutex = malloc(sizeof(pthread_mutex_t))) == NULL) {
+  if ((queue->mutex = malloc(sizeof(*queue->mutex))) == NULL) {
     perror(NULL);
     abort();
   }
@@ -18,7 +18,7 @@ struct TSQueue *make_ts_queue(void)
     perror(NULL);
     abort();
   }
-  if ((queue->non_empty = malloc(sizeof(pthread_cond_t))) == NULL) {
+  if ((queue->non_empty = malloc(sizeof(*queue->non_empty))) == NULL) {
     perror(NULL);
     abort();
   }
