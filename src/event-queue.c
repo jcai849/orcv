@@ -1,10 +1,5 @@
-#include "thread-safe-queue.h"
+#include "event-queue.h"
 #include <unistd.h>
-
-typedef struct EventQueue {
-    TSQueue *queue;
-    int fd[2]; /* read, write */
-} EventQueue;
 
 struct EventQueue *make_event_queue(void)
 {
