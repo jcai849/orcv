@@ -1,28 +1,26 @@
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "queue.h"
 
-struct Queue *make_queue(void)
+int queue_init(struct Queue *queue)
 {
-    struct Queue *queue;
-    if ((queue = malloc(sizeof(*queue))) == NULL) {
-        perror(NULL);
-        abort();
-    }
     queue->head = NULL;
     queue->tail = NULL;
-    return queue;
+    return 0;
 }
 
-int queue_empty(struct Queue *queue)
+int queue_empty(struct Queue queue)
 {
-    return queue->head == NULL;
+    return queue.head == NULL;
 }
 
-void *pop_queue(struct Queue *queue)
+void *queue_dequeue(struct Queue *queue)
 {
     void *pdata;
     struct Node *head;
 
-    if (queue_empty(queue))
+    if (queue_empty(*queue))
         return NULL;
     pdata = queue->head->pdata;
     head = queue->head;
@@ -32,18 +30,17 @@ void *pop_queue(struct Queue *queue)
     return pdata;
 }
 
-int push_queue(struct Queue *queue, void *pdata)
+int queue_enqueue(struct Queue *queue, void *pdata)
 {
     struct Node *node;
 
     if ((node = malloc(sizeof(*node))) == NULL) {
         perror(NULL);
-        abort();
     }
     node->next = NULL;
     node->pdata = pdata;
 
-    if (queue_empty(queue)) {
+    if (queue_empty(*queue)) {
         queue->head = node;
     } else {
         queue->tail->next = node;
@@ -52,11 +49,10 @@ int push_queue(struct Queue *queue, void *pdata)
     return 0;
 }
 
-int rm_queue(struct Queue *queue)
+int queue_destroy(struct Queue *queue)
 {
-    while (!queue_empty(queue)) {
-        pop_queue(queue);
+    while (!queue_empty(*queue)) {
+        queue_dequeue(queue);
     }
-    free(queue);
     return 0;
 }

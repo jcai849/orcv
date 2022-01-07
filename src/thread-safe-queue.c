@@ -1,92 +1,60 @@
+#include <stdio.h>
 #include "thread-safe-queue.h"
 
-struct TSQueue *make_ts_queue(void)
+int tsqueue_init(TSQueue *queue)
 {
-  struct TSQueue *queue;
-
-  if ((queue = malloc(sizeof(*queue))) == NULL) {
-    perror(NULL);
-    abort();
-  }
-  queue->queue = make_queue();
-
-  if ((queue->mutex = malloc(sizeof(*queue->mutex))) == NULL) {
-    perror(NULL);
-    abort();
-  }
-  if (pthread_mutex_init(queue->mutex, NULL) != 0) {
-    perror(NULL);
-    abort();
-  }
-  if ((queue->non_empty = malloc(sizeof(*queue->non_empty))) == NULL) {
-    perror(NULL);
-    abort();
-  }
-  if (pthread_cond_init(queue->non_empty, NULL) != 0) {
-    perror(NULL);
-    abort();
-  }
-
-  return queue;
+  queue_init(&queue->queue);
+  pthread_mutex_init(&queue->mutex, NULL);
+  pthread_cond_init(&queue->non_empty, NULL);
+  return 0;
 }
 
-void *pop_ts_queue(struct TSQueue *queue)
+void *tsqueue_dequeue(struct TSQueue *queue)
 {
     void *pdata;
 
-    if (pthread_mutex_lock(queue->mutex) != 0) {
+    if (pthread_mutex_lock(&queue->mutex) != 0) {
         perror(NULL);
-        abort();
     };
     while (queue_empty(queue->queue)) {
-        if (pthread_cond_wait(queue->non_empty, queue->mutex) != 0) {
+        if (pthread_cond_wait(&queue->non_empty, &queue->mutex) != 0) {
             perror(NULL);
-            abort();
         };
     }
-    pdata = pop_queue(queue->queue);
-    if (pthread_mutex_unlock(queue->mutex) != 0) {
+    pdata = queue_dequeue(&queue->queue);
+    if (pthread_mutex_unlock(&queue->mutex) != 0) {
         perror(NULL);
-        abort();
     };
     return pdata;
 }
 
-int push_ts_queue(struct TSQueue *queue, void *pdata)
+int tsqueue_enqueue(struct TSQueue *queue, void *pdata)
 {
     int status;
 
-    if (pthread_mutex_lock(queue->mutex) != 0) {
+    if (pthread_mutex_lock(&queue->mutex) != 0) {
         perror(NULL);
-        abort();
     };
-    status = push_queue(queue->queue, pdata);
-    if (pthread_cond_signal(queue->non_empty) != 0) {
+    status = queue_enqueue(&queue->queue, pdata);
+    if (pthread_cond_signal(&queue->non_empty) != 0) {
         perror(NULL);
-        abort();
     };
-    if (pthread_mutex_unlock(queue->mutex) != 0) {
+    if (pthread_mutex_unlock(&queue->mutex) != 0) {
         perror(NULL);
-        abort();
     };
     return status;
 }
 
-int rm_ts_queue(struct TSQueue *queue)
+int tsqueue_destroy(struct TSQueue *queue)
 {
     int status;
 
-    status  = rm_queue(queue->queue);
-    if (pthread_cond_destroy(queue->non_empty) != 0) {
-        perror(NULL);
-        abort();
+    if (pthread_cond_destroy(&queue->non_empty) != 0) {
+        perror("couldn't destroy condition var");
     }
-    free(queue->non_empty);
-    if (pthread_mutex_destroy(queue->mutex) != 0) {
-        perror(NULL);
-        abort();
+    if (pthread_mutex_destroy(&queue->mutex) != 0) {
+        perror("couldn't destroy mutex");
     }
-    free(queue->mutex);
-    free(queue);
+    status  = queue_destroy(&queue->queue);
     return status;
 }
