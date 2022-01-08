@@ -1,14 +1,12 @@
+#include <poll.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "inputs.h"
 
-struct Inputs *make_inputs(void)
+int inputs_init(struct Inputs *inputs)
 {
-    struct Inputs *inputs;
     int i;
-
-    if ((inputs = malloc(sizeof(*inputs))) == NULL) {
-        perror(NULL);
-        abort();
-    }
 
     for (i = 0; i < POLL_ARRAY_SIZE; i++) {
         inputs->fds[i].fd = -1;
@@ -17,10 +15,10 @@ struct Inputs *make_inputs(void)
 
     inputs->queues = NULL;
 
-    return inputs;
+    return 0;
 }
 
-int add_fd(struct Inputs *inputs, int fd)
+int inputs_insert_fd(struct Inputs *inputs, int fd)
 {
     int i = 0;
     while (inputs->fds[i].fd != -1 && i < POLL_ARRAY_SIZE) {i++;}
@@ -32,11 +30,11 @@ int add_fd(struct Inputs *inputs, int fd)
     return 0;
 }
 
-int add_queue(struct Inputs *inputs, EventQueue *queue)
+int inputs_insert_queue(struct Inputs *inputs, struct EventQueue *queue)
 {
     EventQueueNode *node;
 
-    add_fd(inputs, queue->fd[0]);
+    inputs_insert_fd(inputs, queue->fd[0]);
     if ((node = malloc(sizeof(*node))) == NULL) {
         perror(NULL);
         abort();
@@ -47,23 +45,23 @@ int add_queue(struct Inputs *inputs, EventQueue *queue)
     return 0;
 }
 
-int remove_fd(struct Inputs *inputs, int fd)
+int inputs_remove_fd(struct Inputs *inputs, int fd)
 {
     int i = 0;
     while (inputs->fds[i].fd != fd && i < POLL_ARRAY_SIZE) {i++;}
     if (i == POLL_ARRAY_SIZE) {
         fprintf(stderr, "fd not found\n");
-        abort();
+        return 1;
     }
     inputs->fds[i].fd = -1;
     return 0;
 }
 
-int remove_queue_fd(struct Inputs *inputs, int fd)
+int inputs_remove_queue_fd(struct Inputs *inputs, int fd)
 {
-    EventQueueNode *curr, *next;
+    struct EventQueueNode *curr, *next;
 
-    remove_fd(inputs, fd);
+    inputs_remove_fd(inputs, fd);
     curr = inputs->queues;
     if (curr  == NULL) return 1;
     if (curr->queue->fd[0] == fd) {
@@ -82,7 +80,7 @@ int remove_queue_fd(struct Inputs *inputs, int fd)
     return 1;
 }
 
-int is_queue(struct Inputs *inputs, int fd)
+int inputs_fd_is_queue(struct Inputs *inputs, int fd)
 {
     struct EventQueueNode *curr;
 
@@ -95,7 +93,7 @@ int is_queue(struct Inputs *inputs, int fd)
     return 0;
 }
 
-EventQueue *find_queue(struct Inputs *inputs, int fd)
+EventQueue *inputs_retrieve_queue(struct Inputs *inputs, int fd)
 {
     struct EventQueueNode *curr;
 
@@ -109,9 +107,9 @@ EventQueue *find_queue(struct Inputs *inputs, int fd)
     abort();
 }
 
-int delete_queue_nodes(EventQueueNode *queues) // N.B. Doesn't delete the queues.
+int delete_queue_nodes(struct EventQueueNode *queues) // N.B. Doesn't delete the actual queues.
 {
-    EventQueueNode *tmp;
+    struct EventQueueNode *tmp;
 
     tmp = queues;
     while (queues != NULL) {
@@ -122,9 +120,8 @@ int delete_queue_nodes(EventQueueNode *queues) // N.B. Doesn't delete the queues
     return 0;
 }
 
-int delete_inputs(struct Inputs *inputs)
+int inputs_destroy(struct Inputs *inputs)
 {
     delete_queue_nodes(inputs->queues);
-    free(inputs);
     return 0;
 }

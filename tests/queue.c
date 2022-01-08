@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stddef.h>
 #include "../src/queue.h"
 
 int test_unused(void)
