@@ -50,7 +50,7 @@ int inputs_remove_fd(struct Inputs *inputs, int fd)
     int i = 0;
     while (inputs->fds[i].fd != fd && i < POLL_ARRAY_SIZE) {i++;}
     if (i == POLL_ARRAY_SIZE) {
-        fprintf(stderr, "fd not found\n");
+        // fprintf(stderr, "fd not found\n");
         return 1;
     }
     inputs->fds[i].fd = -1;
@@ -103,8 +103,8 @@ EventQueue *inputs_retrieve_queue(struct Inputs *inputs, int fd)
             return curr->queue;
         curr = curr->next;
     }
-    fprintf(stderr, "Queue not found\n");
-    abort();
+    // fprintf(stderr, "Queue not found\n");
+    return NULL;
 }
 
 int delete_queue_nodes(struct EventQueueNode *queues) // N.B. Doesn't delete the actual queues.
