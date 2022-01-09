@@ -69,13 +69,15 @@ int inputs_remove_queue_fd(struct Inputs *inputs, int fd)
         free(curr);
         return 0;
     }
-    next = inputs->queues->next;
+    next = curr->next;
     while (next != NULL) {
         if (next->queue->fd[0] == fd) {
             curr->next = next->next;
             free(next);
             return 0;
         }
+        curr = next;
+        next = curr->next;
     }
     return 1;
 }
