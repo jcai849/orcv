@@ -13,3 +13,4 @@ queue.out: queue.c ../src/queue.c
 thread-safe-queue.out: thread-safe-queue.c ../src/thread-safe-queue.c ../src/queue.c
 event-queue.out: event-queue.c ../src/event-queue.c ../src/thread-safe-queue.c ../src/queue.c
 inputs.out: inputs.c ../src/inputs.c ../src/event-queue.c ../src/thread-safe-queue.c ../src/queue.c
+comms.out: comms.c ../src/comms.c ../src/inputs.c ../src/event-queue.c ../src/thread-safe-queue.c ../src/queue.c
