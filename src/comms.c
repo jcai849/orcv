@@ -25,8 +25,8 @@ struct ReceiverArg {
 
 char *itoa(int num) // Auto-allocates; Must free returned val
 {
-    char *string_form;
     int length;
+    char *string_form;
 
     length = snprintf(NULL, 0, "%d", num);
     if ((string_form = malloc(length + 1)) == NULL) {
@@ -120,7 +120,10 @@ int send_data(char *addr, int port, Data *data)
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_NUMERICSERV;
-    string_port = itoa(port);
+    if ((string_port = itoa(port)) == NULL) {
+        perror(NULL);
+        return -1;
+    };
     addr_error = getaddrinfo(addr, string_port, &hints, &res);
     if  (addr_error) {
         fprintf(stderr, "%s\n", gai_strerror(addr_error));
@@ -129,10 +132,12 @@ int send_data(char *addr, int port, Data *data)
     sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
     if (sockfd == -1) {
         perror(NULL);
+        return -1;
     }
     retcode = connect(sockfd, res->ai_addr, res->ai_addrlen);
     if (retcode == -1) {
         perror(NULL);
+        return -1;
     }
 
     msg.connection = sockfd;
@@ -156,8 +161,10 @@ void *listener(void *arg)
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
 
-    servname = itoa(((struct ListenerArg *) arg)->port);
-
+    if ((servname = itoa(((struct ListenerArg *) arg)->port)) == NULL) {
+        perror(NULL);
+        return NULL;
+    };
     addr_error = getaddrinfo(NULL, servname, &hints, &res);
     free(servname);
     if (addr_error) {
@@ -168,9 +175,11 @@ void *listener(void *arg)
     if (bind(sockfd, res->ai_addr, res->ai_addrlen) == -1) {
         perror(NULL);
         close(sockfd);
+        return NULL;
     }
     if (sockfd == 0) {
         perror(NULL);
+        return NULL;
     }
     freeaddrinfo(res);
     (void) listen(sockfd, BACKLOG);
@@ -180,9 +189,11 @@ void *listener(void *arg)
         client_fd = accept(sockfd, (struct sockaddr *) &client_addr, &addr_size);
         if (client_fd == -1) {
             perror(NULL);
+            return NULL;
         }
         if ((queued_fd = malloc(sizeof(*queued_fd))) == NULL) {
             perror(NULL);
+            return NULL;
         };
         tsqueue_enqueue(((struct ListenerArg *) arg)->ts_queue, queued_fd);
     }
