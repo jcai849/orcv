@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 #include "inputs.h"
 #include "comms.h"
 
@@ -7,19 +9,19 @@ Message *multiplex(Inputs *inputs) {
 
     if (poll(inputs->fds, POLL_ARRAY_SIZE, INFTIM) == -1) {
         perror(NULL);
-        abort();
+        return NULL;
     }
     for (i = 0; i < POLL_ARRAY_SIZE; i++) {
         if (inputs->fds[i].revents & (POLLERR|POLLNVAL)) {
             perror(NULL);
-            abort();
+            return NULL;
         }
         if (inputs->fds[i].revents & (POLLIN|POLLHUP)) {
-            if (is_queue(inputs, inputs->fds[i].fd)) {
-                msg = pop_event_queue(find_queue(inputs, inputs->fds[i].fd));
+            if (inputs_fd_is_queue(inputs, inputs->fds[i].fd)) {
+                msg = event_queue_dequeue(inputs_retrieve_queue(inputs, inputs->fds[i].fd));
             } else {
                 msg = receive(inputs->fds[i].fd);
-                remove_fd(inputs, inputs->fds[i].fd);
+                inputs_remove_fd(inputs, inputs->fds[i].fd);
             }
         }
     }
