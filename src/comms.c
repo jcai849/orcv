@@ -244,9 +244,9 @@ Inputs *start(int port, int threads)
     receiver_arg->ts_queue = ts_queue;
     receiver_arg->event_queue = event_queue;
 
-    pthread_create(&thread, NULL, listener, listener_arg);
+    pthread_create(&thread, NULL, &listener, listener_arg);
     for (i = 0; i < threads; i++) {
-        pthread_create(&thread, NULL, receiver, receiver_arg);
+        pthread_create(&thread, NULL, &receiver, receiver_arg);
     }
 
     if ((inputs = malloc(sizeof(*inputs))) == NULL) {

@@ -1,4 +1,5 @@
-*.so
+*.a
+*.core
 *.o
 *.out
-*.core
+*.so
