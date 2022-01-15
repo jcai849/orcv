@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <poll.h>
 #include "../src/event-queue.h"
 
 int test_unused(void)
@@ -139,6 +140,21 @@ int test_pop_first(void)
     return 0;
 }
 
+int test_fd(void)
+{
+    EventQueue queue;
+    struct pollfd fds[1];
+    int item = 3;
+
+    event_queue_init(&queue);
+    event_queue_enqueue(&queue, &item);
+    fds[0].fd = queue.fd[0];
+    fds[0].events = POLLIN;
+    poll(fds, 1, INFTIM);
+    event_queue_destroy(&queue);
+    return 0;
+}
+
 int main(void)
 {
     test_unused();
@@ -146,5 +162,6 @@ int main(void)
     test_excess_push();
     test_push_first();
     test_pop_first();
+    test_fd();
     return 0;
 }

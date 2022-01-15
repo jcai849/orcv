@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#include "comms.h"
+#include "multiplex.h"
 
 Message *multiplex(Inputs *inputs) {
     int i;

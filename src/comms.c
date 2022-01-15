@@ -99,7 +99,9 @@ int send_message(struct Message *msg) {
     if (send(sockfd, &len, sizeof(len), 0) != sizeof(len)) {
         close(sockfd);
         msg->connection = -1;
+        perror(NULL);
         fprintf(stderr, "Failed to write header\n");
+        return -1;
     }
     while (i < len) {
         need = (len - i > MAX_SEND_SIZE) ? MAX_SEND_SIZE : (len - i);
@@ -108,6 +110,8 @@ int send_message(struct Message *msg) {
           close(sockfd);
           msg->connection = -1;
           fprintf(stderr, "Failed to write (n=%d of %d) %s\n", n, need, (n == -1 && errno) ? strerror(errno) : "");
+          perror(NULL);
+          return -1;
         }
         i += n;
     }

@@ -18,7 +18,7 @@ void *event_queue_dequeue(struct EventQueue *queue)
     unsigned char signal[1] = {0};
 
     pdata = tsqueue_dequeue(&queue->queue);
-    if (read(queue->fd[1], signal, sizeof(char)) == -1) {
+    if (read(queue->fd[0], signal, sizeof(char)) == -1) {
         perror(NULL);
     };
     return pdata;
@@ -30,7 +30,7 @@ int event_queue_enqueue(struct EventQueue *queue, void *pdata)
     int status;
 
     status = tsqueue_enqueue(&queue->queue, pdata);
-    if (write(queue->fd[0], signal, sizeof(char)) == -1) {
+    if (write(queue->fd[1], signal, sizeof(char)) == -1) {
         perror(NULL);
     }
     return 0;
