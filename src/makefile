@@ -5,5 +5,5 @@ CFLAGS=-g -Wall -Wextra -pipe -O0
 liborcv.a: ${OBJS}
 	${AR} ${ARFLAGS} ${.TARGET} ${.ALLSRC}
 clean:
-	rm *.o
-	rm *.a
+	rm -f *.o
+	rm -f *.a

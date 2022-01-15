@@ -11,5 +11,5 @@ LDFLAGS= -lpthread ../src/liborcv.a
 test: queue.test thread-safe-queue.test event-queue.test inputs.test comms.test multiplex.test
 
 clean:
-	rm *.out
-	rm *.core
+	rm -f *.out
+	rm -f *.core
