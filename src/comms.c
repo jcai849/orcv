@@ -1,5 +1,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
 #include <netdb.h>
 #include <stdlib.h>
 #include <string.h>
@@ -44,12 +45,13 @@ Message *receive(int fd)
     unsigned char *payload;
     int n, need;
     struct Message *msg;
+    struct Data *data;
 
     n = recv(fd, &len, sizeof(len), 0);
     if (n != sizeof(len) || len == 0) {
+      fprintf(stderr, "Header read error on descriptor %d", fd);
       close(fd);
       fd = -1;
-      fprintf(stderr, "Header read error on descriptor %d", fd);
       return NULL;
     } else {
         if ((payload = malloc(len)) == NULL) {
@@ -75,11 +77,15 @@ Message *receive(int fd)
             i += n;
         }
     }
-    if ((msg = malloc(sizeof(*msg))) == NULL) {
-            perror(NULL);
+    if ((data = malloc(sizeof(*data))) == NULL) {
+        perror(NULL);
     }
-    msg->data->data = payload;
-    msg->data->size = len;
+    data->data = payload;
+    data->size = len;
+    if ((msg = malloc(sizeof(*msg))) == NULL) {
+        perror(NULL);
+    }
+    msg->data = data;
     msg->connection = fd;
 
     return msg;
@@ -147,54 +153,85 @@ int send_data(char *addr, int port, Data *data)
     return sockfd;
 }
 
+void *get_in_addr(struct sockaddr *sa)
+{
+    if (sa->sa_family == AF_INET) {
+        return &(((struct sockaddr_in*)sa)->sin_addr);
+    }
+
+    return &(((struct sockaddr_in6*)sa)->sin6_addr);
+}
+
 void *listener(void *arg)
 {
     struct sockaddr_storage client_addr;
     socklen_t addr_size;
-    struct addrinfo hints, *res;
+    struct addrinfo hints, *res, *p;
     int addr_error;
     int sockfd, client_fd, *queued_fd;
     char *servname;
+    // char s[INET6_ADDRSTRLEN];
+    int yes = 1;
 
     memset(&hints, 0, sizeof hints);
-    hints.ai_flags = AI_PASSIVE;
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE;
 
     if ((servname = itoa(((struct ListenerArg *) arg)->port)) == NULL) {
         perror(NULL);
         return NULL;
-    };
-    addr_error = getaddrinfo(NULL, servname, &hints, &res);
+    }
+    if ((addr_error = getaddrinfo(NULL, servname, &hints, &res)) != 0) {
+        fprintf(stderr, "%s\n", gai_strerror(addr_error));
+        return NULL;
+    }
     free(servname);
     if (addr_error) {
         fprintf(stderr, "%s\n", gai_strerror(addr_error));
     }
-    sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-    if (sockfd == -1)
-    if (bind(sockfd, res->ai_addr, res->ai_addrlen) == -1) {
-        perror(NULL);
-        close(sockfd);
-        return NULL;
-    }
-    if (sockfd == 0) {
-        perror(NULL);
-        return NULL;
-    }
-    freeaddrinfo(res);
-    (void) listen(sockfd, BACKLOG);
-    addr_size = sizeof client_addr;
-
-    while (1) {
-        client_fd = accept(sockfd, (struct sockaddr *) &client_addr, &addr_size);
-        if (client_fd == -1) {
+    for (p = res; p != NULL; p = p->ai_next) {
+        if ((sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1) {
+            perror(NULL);
+            continue;
+        }
+        if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
             perror(NULL);
             return NULL;
         }
+        if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
+            close(sockfd);
+            perror(NULL);
+            return NULL;
+        }
+        break;
+    }
+    freeaddrinfo(res);
+
+    if (p == NULL) {
+        fprintf(stderr, "bind failure\n");
+        return NULL;
+    }
+    if (listen(sockfd, BACKLOG) == -1) {
+        perror(NULL);
+        return NULL;
+    }
+
+
+    while (1) {
+        addr_size = sizeof client_addr;
+        client_fd = accept(sockfd, (struct sockaddr *) &client_addr, &addr_size);
+        if (client_fd == -1) {
+            perror(NULL);
+            continue;
+        }
+        // inet_ntop(client_addr.ss_family, get_in_addr((struct sockaddr *) &client_addr), s, sizeof(s));
+        // printf("got connection from %s\n", s);
         if ((queued_fd = malloc(sizeof(*queued_fd))) == NULL) {
             perror(NULL);
             return NULL;
         };
+        *queued_fd = client_fd;
         tsqueue_enqueue(((struct ListenerArg *) arg)->ts_queue, queued_fd);
     }
 }
