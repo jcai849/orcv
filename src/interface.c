@@ -22,16 +22,16 @@ SEXP C_send(SEXP address, SEXP port, SEXP serialised)
     Data data;
     const char *c_address;
     int c_port;
-    SEXP status;
+    SEXP fd;
 
     data.data = RAW(serialised);
     data.size = LENGTH(serialised);
     c_address = CHAR(STRING_ELT(address, 0));
     c_port = INTEGER(port)[0];
-    status = PROTECT(allocVector(INTSXP, 1));
-    INTEGER(status)[0] = send_data(c_address, c_port, &data);
+    fd = PROTECT(allocVector(INTSXP, 1));
+    INTEGER(fd)[0] = send_data(c_address, c_port, &data);
     UNPROTECT(1);
-    return status;
+    return fd;
 }
 
 SEXP C_multiplex(SEXP control)

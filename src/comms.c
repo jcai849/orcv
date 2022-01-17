@@ -140,7 +140,7 @@ int send_data(const char *addr, int port, Data *data)
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_NUMERICSERV;
     if ((string_port = itoa(port)) == NULL) {
-        perror(NULL);
+        fprintf(stderr, "unable to convert port to string\n");
         return -1;
     };
     addr_error = getaddrinfo(addr, string_port, &hints, &res);
@@ -162,7 +162,9 @@ int send_data(const char *addr, int port, Data *data)
 
     msg.connection = sockfd;
     msg.data = data;
-    send_message(&msg);
+    if (send_message(&msg) != 0) {
+        return -1;
+    }
 
     return sockfd;
 }
@@ -193,7 +195,7 @@ void *listener(void *arg)
     hints.ai_flags = AI_PASSIVE;
 
     if ((servname = itoa(((struct ListenerArg *) arg)->port)) == NULL) {
-        perror(NULL);
+        fprintf(stderr, "unable to convert port to string\n");
         return NULL;
     }
     if ((addr_error = getaddrinfo(NULL, servname, &hints, &res)) != 0) {
