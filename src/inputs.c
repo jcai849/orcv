@@ -24,7 +24,7 @@ int inputs_insert_fd(struct Inputs *inputs, int fd)
     while (inputs->fds[i].fd != -1 && i < POLL_ARRAY_SIZE) {i++;}
     if (i == POLL_ARRAY_SIZE) {
         fprintf(stderr, "Poll array size too small\n");
-        abort();
+        return -1;
     }
     inputs->fds[i].fd = fd;
     return 0;
@@ -34,10 +34,12 @@ int inputs_insert_queue(struct Inputs *inputs, struct EventQueue *queue)
 {
     EventQueueNode *node;
 
-    inputs_insert_fd(inputs, queue->fd[0]);
+    if (inputs_insert_fd(inputs, queue->fd[0]) != 0) {
+        return -1;
+    }
     if ((node = malloc(sizeof(*node))) == NULL) {
         perror(NULL);
-        abort();
+        return -1;
     }
     node->queue = queue;
     node->next = inputs->queues;
@@ -50,8 +52,7 @@ int inputs_remove_fd(struct Inputs *inputs, int fd)
     int i = 0;
     while (inputs->fds[i].fd != fd && i < POLL_ARRAY_SIZE) {i++;}
     if (i == POLL_ARRAY_SIZE) {
-        // fprintf(stderr, "fd not found\n");
-        return 1;
+        return -1;
     }
     inputs->fds[i].fd = -1;
     return 0;
@@ -61,9 +62,11 @@ int inputs_remove_queue_fd(struct Inputs *inputs, int fd)
 {
     struct EventQueueNode *curr, *next;
 
-    inputs_remove_fd(inputs, fd);
+    if (inputs_remove_fd(inputs, fd) != 0) {
+        return -1;
+    }
     curr = inputs->queues;
-    if (curr  == NULL) return 1;
+    if (curr  == NULL) return -1;
     if (curr->queue->fd[0] == fd) {
         inputs->queues = curr->next;
         free(curr);
@@ -79,7 +82,7 @@ int inputs_remove_queue_fd(struct Inputs *inputs, int fd)
         curr = next;
         next = curr->next;
     }
-    return 1;
+    return -1;
 }
 
 int inputs_fd_is_queue(struct Inputs *inputs, int fd)

@@ -11,6 +11,6 @@ typedef struct Message {
 } Message;
 
 Message *receive(int);
-int send_data(char *addr, int port, struct Data *);
+int send_data(const char *addr, int port, struct Data *);
 int send_message(struct Message *);
 Inputs *start(int, int);

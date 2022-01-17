@@ -118,7 +118,7 @@ int send_message(struct Message *msg) {
     return 0;
 }
 
-int send_data(char *addr, int port, Data *data)
+int send_data(const char *addr, int port, Data *data)
 {
     struct addrinfo hints, *res;
     int addr_error, retcode;
@@ -267,11 +267,12 @@ Inputs *start(int port, int threads)
 
     if ((ts_queue = malloc(sizeof(*ts_queue))) == NULL) {
         perror(NULL);
-    };
+        return NULL;
+    }
     tsqueue_init(ts_queue);
     if ((event_queue = malloc(sizeof(*event_queue))) == NULL) {
         perror(NULL);
-    };
+    }
     event_queue_init(event_queue);
 
     if ((listener_arg = malloc(sizeof(*listener_arg))) == NULL) {

@@ -1,4 +1,4 @@
-SRCS!=find . -name '*.c'
+SRCS= comms.c thread-safe-queue.c event-queue.c multiplex.c inputs.c queue.c
 OBJS:=${SRCS:S/.c/.o/g}
 ARFLAGS=rcs
 CFLAGS=-g -Wall -Wextra -pipe -O0

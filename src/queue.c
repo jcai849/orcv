@@ -36,6 +36,7 @@ int queue_enqueue(struct Queue *queue, void *pdata)
 
     if ((node = malloc(sizeof(*node))) == NULL) {
         perror(NULL);
+        return 1;
     }
     node->next = NULL;
     node->pdata = pdata;

@@ -7,8 +7,8 @@ int event_queue_init(struct EventQueue *queue)
     tsqueue_init(&queue->queue);
     if (pipe(queue->fd) == -1) {
         perror(NULL);
-    };
-
+        return -1;
+    }
     return 0;
 }
 
@@ -20,7 +20,8 @@ void *event_queue_dequeue(struct EventQueue *queue)
     pdata = tsqueue_dequeue(&queue->queue);
     if (read(queue->fd[0], signal, sizeof(char)) == -1) {
         perror(NULL);
-    };
+        return NULL;
+    }
     return pdata;
 }
 
@@ -32,6 +33,7 @@ int event_queue_enqueue(struct EventQueue *queue, void *pdata)
     status = tsqueue_enqueue(&queue->queue, pdata);
     if (write(queue->fd[1], signal, sizeof(char)) == -1) {
         perror(NULL);
+        return -1;
     }
     return 0;
 }
@@ -43,6 +45,7 @@ int event_queue_destroy(struct EventQueue *queue)
     status = tsqueue_destroy(&queue->queue);
     if (close(queue->fd[0]) == -1 || close(queue->fd[1]) == -1) {
         perror(NULL);
+        return -1;
     }
-    return 0;
+    return status;
 }
