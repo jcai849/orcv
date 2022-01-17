@@ -29,12 +29,18 @@ char *itoa(int num) // Auto-allocates; Must free returned val
     int length;
     char *string_form;
 
-    length = snprintf(NULL, 0, "%d", num);
+    if ((length = snprintf(NULL, 0, "%d", num)) < 0) {
+        perror(NULL);
+        return NULL;
+    }
     if ((string_form = malloc(length + 1)) == NULL) {
         perror(NULL);
         return NULL;
     }
-    snprintf(string_form, length + 1, "%d", num);
+    if ((snprintf(string_form, length + 1, "%d", num)) < 0) {
+        perror(NULL);
+        return NULL;
+    }
     return string_form;
 }
 
@@ -56,6 +62,7 @@ Message *receive(int fd)
     } else {
         if ((payload = malloc(len)) == NULL) {
             perror(NULL);
+            return NULL;
         }
         while (i < len) {
             need = (len - i > MAX_RECV_SIZE) ? MAX_RECV_SIZE : (len - i);
@@ -79,11 +86,13 @@ Message *receive(int fd)
     }
     if ((data = malloc(sizeof(*data))) == NULL) {
         perror(NULL);
+        return NULL;
     }
     data->data = payload;
     data->size = len;
     if ((msg = malloc(sizeof(*msg))) == NULL) {
         perror(NULL);
+        return NULL;
     }
     msg->data = data;
     msg->connection = fd;
@@ -137,6 +146,7 @@ int send_data(const char *addr, int port, Data *data)
     addr_error = getaddrinfo(addr, string_port, &hints, &res);
     if  (addr_error) {
         fprintf(stderr, "%s\n", gai_strerror(addr_error));
+        return -1;
     }
     free(string_port);
     sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
@@ -236,7 +246,10 @@ void *listener(void *arg)
             return NULL;
         };
         *queued_fd = client_fd;
-        tsqueue_enqueue(((struct ListenerArg *) arg)->ts_queue, queued_fd);
+        if (tsqueue_enqueue(((struct ListenerArg *) arg)->ts_queue, queued_fd) != 0) {
+            fprintf(stderr, "enqueue issue\n");
+            return NULL;
+        }
     }
 }
 
@@ -247,11 +260,18 @@ void *receiver(void *arg)
     struct Message *msg;
 
     while (1) {
-        pclient_fd = tsqueue_dequeue(((struct ReceiverArg *) arg)->ts_queue);
+        if ((pclient_fd = tsqueue_dequeue(((struct ReceiverArg *) arg)->ts_queue)) == NULL) {
+            fprintf(stderr, "dequeueing NULL\n");
+            return NULL;
+        }
         client_fd = *pclient_fd;
-        msg = receive(client_fd);
+        if ((msg = receive(client_fd)) == NULL) {
+            return NULL;
+        }
         free(pclient_fd);
-        event_queue_enqueue(((struct ReceiverArg *) arg)->event_queue, msg);
+        if (event_queue_enqueue(((struct ReceiverArg *) arg)->event_queue, msg) != 0) {
+            return NULL;
+        }
     }
 }
 
@@ -269,33 +289,50 @@ Inputs *start(int port, int threads)
         perror(NULL);
         return NULL;
     }
-    tsqueue_init(ts_queue);
+    if (tsqueue_init(ts_queue) != 0) {
+        return NULL;
+    }
     if ((event_queue = malloc(sizeof(*event_queue))) == NULL) {
         perror(NULL);
     }
-    event_queue_init(event_queue);
+    if (event_queue_init(event_queue) != 0) {
+        return NULL;
+    }
 
     if ((listener_arg = malloc(sizeof(*listener_arg))) == NULL) {
         perror(NULL);
+        return NULL;
     }
     listener_arg->port = port;
     listener_arg->ts_queue = ts_queue;
     if ((receiver_arg = malloc(sizeof(*receiver_arg))) == NULL) {
         perror(NULL);
+        return NULL;
     }
     receiver_arg->ts_queue = ts_queue;
     receiver_arg->event_queue = event_queue;
 
-    pthread_create(&thread, NULL, &listener, listener_arg);
+    if (pthread_create(&thread, NULL, &listener, listener_arg) != 0) {
+        perror(NULL);
+        return NULL;
+    }
     for (i = 0; i < threads; i++) {
-        pthread_create(&thread, NULL, &receiver, receiver_arg);
+        if (pthread_create(&thread, NULL, &receiver, receiver_arg) != 0) {
+            perror(NULL);
+            return NULL;
+        }
     }
 
     if ((inputs = malloc(sizeof(*inputs))) == NULL) {
         perror(NULL);
+        return NULL;
     };
-    inputs_init(inputs);
-    inputs_insert_queue(inputs, event_queue);
+    if (inputs_init(inputs) != 0) {
+        return NULL;
+    }
+    if (inputs_insert_queue(inputs, event_queue) != 0) {
+        return NULL;
+    }
 
     return inputs;
 }

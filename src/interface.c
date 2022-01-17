@@ -11,6 +11,9 @@ SEXP C_start(SEXP port, SEXP threads)
     c_port = INTEGER(port)[0];
     c_threads = INTEGER(threads)[0];
     control = start(c_port, c_threads);
+    if (control == NULL) {
+        return R_NilValue;
+    }
     return R_MakeExternalPtr(control, R_NilValue, R_NilValue);
 }
 
@@ -19,13 +22,16 @@ SEXP C_send(SEXP address, SEXP port, SEXP serialised)
     Data data;
     const char *c_address;
     int c_port;
+    SEXP status;
 
     data.data = RAW(serialised);
     data.size = LENGTH(serialised);
     c_address = CHAR(STRING_ELT(address, 0));
     c_port = INTEGER(port)[0];
-    send_data(c_address, c_port, &data);
-    return ScalarLogical(1);
+    status = PROTECT(allocVector(INTSXP, 1));
+    INTEGER(status)[0] = send_data(c_address, c_port, &data);
+    UNPROTECT(1);
+    return status;
 }
 
 SEXP C_multiplex(SEXP control)
@@ -36,7 +42,9 @@ SEXP C_multiplex(SEXP control)
     SEXP data, fd, event, class;
 
     inputs = R_ExternalPtrAddr(control);
-    message = multiplex(inputs);
+    if ((message = multiplex(inputs)) == NULL) {
+        return R_NilValue;
+    }
 
     data = PROTECT(allocVector(RAWSXP, message->data->size));
     memcpy(RAW(data), message->data->data, message->data->size);
@@ -63,28 +71,39 @@ SEXP C_respond(SEXP fd, SEXP serialised)
 {
     Data data;
     Message message;
+    SEXP status;
 
     data.data = RAW(serialised);
     data.size = LENGTH(serialised);
     message.data = &data;
     message.connection = INTEGER(fd)[0];
-    send_message(&message);
-    return ScalarLogical(1);
+    status = PROTECT(allocVector(INTSXP, 1));
+    INTEGER(status)[0] = send_message(&message);
+    UNPROTECT(1);
+    return status;
 }
 
 SEXP C_await_response(SEXP control, SEXP fd)
 {
     Inputs *inputs;
     int connection;
+    SEXP status;
 
     inputs = R_ExternalPtrAddr(control);
     connection = INTEGER(fd)[0];
-    inputs_insert_fd(inputs, connection);
-    return ScalarLogical(1);
+    status = PROTECT(allocVector(INTSXP, 1));
+    INTEGER(status)[0] = inputs_insert_fd(inputs, connection);
+    UNPROTECT(1);
+    return status;
 }
 
 SEXP C_close_connection(SEXP fd)
 {
-    close(INTEGER(fd)[0]);
-    return ScalarLogical(1);
+    SEXP status;
+
+    status = PROTECT(allocVector(INTSXP, 1));
+    if ((INTEGER(status)[0] = close(INTEGER(fd)[0])) != 0) {
+        perror(NULL);
+    }
+    return status;
 }
