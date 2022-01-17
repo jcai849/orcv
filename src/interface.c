@@ -1,0 +1,90 @@
+#include <Rinternals.h>
+#include <R.h>
+#include <unistd.h>
+#include "multiplex.h"
+
+SEXP C_start(SEXP port, SEXP threads)
+{
+    int c_port, c_threads;
+    Inputs *control;
+
+    c_port = INTEGER(port)[0];
+    c_threads = INTEGER(threads)[0];
+    control = start(c_port, c_threads);
+    return R_MakeExternalPtr(control, R_NilValue, R_NilValue);
+}
+
+SEXP C_send(SEXP address, SEXP port, SEXP serialised)
+{
+    Data data;
+    const char *c_address;
+    int c_port;
+
+    data.data = RAW(serialised);
+    data.size = LENGTH(serialised);
+    c_address = CHAR(STRING_ELT(address, 0));
+    c_port = INTEGER(port)[0];
+    send_data(c_address, c_port, &data);
+    return ScalarLogical(1);
+}
+
+SEXP C_multiplex(SEXP control)
+{
+    Inputs *inputs;
+    struct Message *message;
+    int connection;
+    SEXP data, fd, event, class;
+
+    inputs = R_ExternalPtrAddr(control);
+    message = multiplex(inputs);
+
+    data = PROTECT(allocVector(RAWSXP, message->data->size));
+    memcpy(RAW(data), message->data->data, message->data->size);
+    free(message->data->data);
+    free(message->data);
+
+    fd = PROTECT(allocVector(INTSXP, 1));
+    INTEGER(fd)[0] = message->connection;
+    free(message);
+
+    event = PROTECT(allocVector(VECSXP, 2));
+    SET_VECTOR_ELT(event, 0, data);
+    SET_VECTOR_ELT(event, 1, fd);
+
+    class = PROTECT(allocVector(STRSXP, 1));
+    SET_STRING_ELT(class, 0, mkChar("Event"));
+    classgets(event, class);
+
+    UNPROTECT(4);
+    return event;
+}
+
+SEXP C_respond(SEXP fd, SEXP serialised)
+{
+    Data data;
+    Message message;
+
+    data.data = RAW(serialised);
+    data.size = LENGTH(serialised);
+    message.data = &data;
+    message.connection = INTEGER(fd)[0];
+    send_message(&message);
+    return ScalarLogical(1);
+}
+
+SEXP C_await_response(SEXP control, SEXP fd)
+{
+    Inputs *inputs;
+    int connection;
+
+    inputs = R_ExternalPtrAddr(control);
+    connection = INTEGER(fd)[0];
+    inputs_insert_fd(inputs, connection);
+    return ScalarLogical(1);
+}
+
+SEXP C_close_connection(SEXP fd)
+{
+    close(INTEGER(fd)[0]);
+    return ScalarLogical(1);
+}

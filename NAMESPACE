@@ -1,2 +1,5 @@
-# useDynLib(orcv,
-#           C_make_queue, C_push, C_pop)
+useDynLib(orcv,
+          C_start, C_send, C_multiplex, C_respond,
+          C_await_response, C_close_connection)
+export(start, send, next_event,
+       respond, await_response, complete_event)
