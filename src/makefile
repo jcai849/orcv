@@ -6,4 +6,5 @@ liborcv.a: ${OBJS}
 	${AR} ${ARFLAGS} ${.TARGET} ${.ALLSRC}
 clean:
 	rm -f *.o
+	rm -f *.so
 	rm -f *.a

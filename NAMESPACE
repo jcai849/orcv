@@ -1,7 +1,12 @@
 useDynLib(orcv,
           C_start, C_send, C_multiplex, C_respond,
-          C_await_response, C_close_connection)
-export(start, send, next_event,
-       respond, await_response, complete_event)
+          C_monitor_response, C_await_response,
+          C_close_connection)
+export(start,
+       event_push, event_pop,
+       respond, monitor_response, await_response,
+       event_complete)
+S3method(monitor_response, Event)
+S3method(monitor_response, FD)
 S3method(await_response, Event)
 S3method(await_response, FD)

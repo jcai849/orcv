@@ -6,10 +6,11 @@ invisible(mcparallel({
 
     start(PORT)
 
-    event <- next_event()
+    event <- event_pop()
     respond(event, 1:20)
-    await_response(event)
-    last_event <- next_event()
+    monitor_response(event)
+    last_event <- event_pop()
+    event_complete(last_event)
 }))
 
 suppressPackageStartupMessages(library(orcv))
@@ -18,7 +19,8 @@ PORT <- 12345L
 start(PORT)
 Sys.sleep(1)
 
-fd <- send("localhost", 12346L, 1:10)
-await_response(fd)
-event <- next_event()
+fd <- event_push(1:10, "localhost", 12346L)
+monitor_response(fd)
+event <- event_pop()
 respond(event, 1:30)
+event_complete(event)

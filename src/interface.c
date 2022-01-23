@@ -34,17 +34,9 @@ SEXP C_send(SEXP address, SEXP port, SEXP serialised)
     return fd;
 }
 
-SEXP C_multiplex(SEXP control)
+SEXP R_event_from_msg(Message *message)
 {
-    Inputs *inputs;
-    struct Message *message;
-    int connection;
-    SEXP data, fd, event, class;
-
-    inputs = R_ExternalPtrAddr(control);
-    if ((message = multiplex(inputs)) == NULL) {
-        return R_NilValue;
-    }
+    SEXP data, event, fd, class;
 
     data = PROTECT(allocVector(RAWSXP, message->data->size));
     memcpy(RAW(data), message->data->data, message->data->size);
@@ -67,6 +59,18 @@ SEXP C_multiplex(SEXP control)
     return event;
 }
 
+SEXP C_multiplex(SEXP control)
+{
+    Inputs *inputs;
+    struct Message *message;
+
+    inputs = R_ExternalPtrAddr(control);
+    if ((message = multiplex(inputs)) == NULL) {
+        return R_NilValue;
+    }
+    return R_event_from_msg(message);
+}
+
 SEXP C_respond(SEXP fd, SEXP serialised)
 {
     Data data;
@@ -83,7 +87,7 @@ SEXP C_respond(SEXP fd, SEXP serialised)
     return status;
 }
 
-SEXP C_await_response(SEXP control, SEXP fd)
+SEXP C_monitor_response(SEXP control, SEXP fd)
 {
     Inputs *inputs;
     int connection;
@@ -97,6 +101,15 @@ SEXP C_await_response(SEXP control, SEXP fd)
     return status;
 }
 
+SEXP C_await_response(SEXP fd)
+{
+    Message *msg;
+    SEXP status;
+
+    msg = receive(INTEGER(fd)[0]);
+    return R_event_from_msg(msg);
+}
+
 SEXP C_close_connection(SEXP fd)
 {
     SEXP status;
@@ -105,5 +118,6 @@ SEXP C_close_connection(SEXP fd)
     if ((INTEGER(status)[0] = close(INTEGER(fd)[0])) != 0) {
         perror(NULL);
     }
+    UNPROTECT(1);
     return status;
 }
