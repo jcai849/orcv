@@ -6,7 +6,11 @@ export(start,
        event_push, event_pop,
        respond, monitor_response, await_response,
        event_complete)
-S3method(monitor_response, Event)
+S3method(respond, FD)
+S3method(respond, Event)
 S3method(monitor_response, FD)
-S3method(await_response, Event)
+S3method(monitor_response, Event)
 S3method(await_response, FD)
+S3method(await_response, Event)
+S3method(event_complete, FD)
+S3method(event_complete, Event)

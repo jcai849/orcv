@@ -22,10 +22,11 @@ event_pop <- function() {
     invisible(event)
 }
 is.event <- function(x) inherits(x, "Event")
-respond <- function(event, value) {
-    stopifnot(is.event(event))
+respond <- function(x, value) UseMethod("respond")
+respond.Event <- function(x, value) respond(x$fd, value)
+respond.FD <- function(x, value) {
     serialised <- serialize(value, NULL)
-    status <- .Call(C_respond, event$fd, serialised)
+    status <- .Call(C_respond, x, serialised)
     if (status == -1) stop()
     invisible(status)
 }
@@ -40,15 +41,23 @@ monitor_response.FD <- function(x, ...) {
 await_response <- function(x, ...) UseMethod("await_response")
 await_response.Event <- function(x, ...)  await_response(x$fd)
 await_response.FD <- function(x, ...) {
-    status <- .Call(C_await_response, x)
+    event <- .Call(C_await_response, x)
+    if (is.null(event)) stop()
+    names(event) <- c("data", "fd")
+    class(event$fd) <- "FD"
+    event$data <- unserialize(event$data)
+    invisible(event)
+}
+event_complete <- function(x, ...) UseMethod("event_complete")
+event_complete.FD <- function(x, ...) {
+    status <- .Call(C_close_connection, x)
     if (status != 0) stop()
     invisible(status)
 }
-event_complete <- function(event) {
+event_complete.Event <- function(x, ...) {
     status <- 0
-    if (!is.null(event$fd)) {
-        status <- .Call(C_close_connection, event$fd)
-        if (status != 0) stop()
+    if (!is.null(x$fd)) {
+        status <- event_complete(x$fd)
     }
     invisible(status)
 }
