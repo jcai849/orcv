@@ -53,7 +53,7 @@ Message *receive(int fd)
     struct Message *msg;
     struct Data *data;
 
-    n = recv(fd, &len, sizeof(len), 0);
+    n = read(fd, &len, sizeof(len));
     if (n != sizeof(len) || len == 0) {
       fprintf(stderr, "Header read error on descriptor %d", fd);
       close(fd);
@@ -66,7 +66,7 @@ Message *receive(int fd)
         }
         while (i < len) {
             need = (len - i > MAX_RECV_SIZE) ? MAX_RECV_SIZE : (len - i);
-            n = recv(fd, payload + i, need, 0);
+            n = read(fd, payload + i, need);
             if (n < 0) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK) {
                     continue;
@@ -105,7 +105,7 @@ int send_message(struct Message *msg) {
     int len = msg->data->size;
     int sockfd = msg->connection;
 
-    if (send(sockfd, &len, sizeof(len), 0) != sizeof(len)) {
+    if (write(sockfd, &len, sizeof(len)) != sizeof(len)) {
         close(sockfd);
         msg->connection = -1;
         perror(NULL);
@@ -114,7 +114,7 @@ int send_message(struct Message *msg) {
     }
     while (i < len) {
         need = (len - i > MAX_SEND_SIZE) ? MAX_SEND_SIZE : (len - i);
-        n = send(sockfd, msg->data->data + i, need, 0);
+        n = write(sockfd, msg->data->data + i, need);
         if (n < 1) {
           close(sockfd);
           msg->connection = -1;
