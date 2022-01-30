@@ -48,6 +48,7 @@ await_response.FD <- function(x, ...) {
     event$data <- unserialize(event$data)
     invisible(event)
 }
+c.FD <- function(x, ...) structure(c(as.vector(x), ...), class="fd")
 event_complete <- function(x, ...) UseMethod("event_complete")
 event_complete.FD <- function(x, ...) {
     status <- .Call(C_close_connection, x)
