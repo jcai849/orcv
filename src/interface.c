@@ -106,7 +106,9 @@ SEXP C_await_response(SEXP fd)
     Message *msg;
     SEXP status;
 
-    msg = receive(INTEGER(fd)[0]);
+    if ((msg = receive(INTEGER(fd)[0])) == NULL) {
+        return R_NilValue;
+    }
     return R_event_from_msg(msg);
 }
 
