@@ -37,7 +37,7 @@ int main(void)
 {
     Inputs* inputs;
 
-    inputs = start(PORT, 4);
+    inputs = start(PORT, NULL, 4);
     test_new_send(inputs);
     return 0;
 }

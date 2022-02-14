@@ -25,7 +25,7 @@ int main(void)
     data.data = value;
     data.size = strlen(value);
 
-    inputs = start(PORT, 4);
+    inputs = start(PORT, NULL, 4);
     pthread_create(&sender_thread, NULL, &sender, &data);
     msg = event_queue_dequeue(inputs->queues->queue);
     assert(!strncmp((char *) msg->data->data, value, data.size));

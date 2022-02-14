@@ -10,7 +10,7 @@ SEXP C_start(SEXP port, SEXP threads)
 
     c_port = INTEGER(port)[0];
     c_threads = INTEGER(threads)[0];
-    control = start(c_port, c_threads);
+    control = start(c_port, NULL, c_threads);
     if (control == NULL) {
         return R_NilValue;
     }

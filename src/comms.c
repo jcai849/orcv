@@ -20,6 +20,7 @@ struct ListenerArg {
 };
 
 struct ReceiverArg {
+    int (*filter)(struct Message *);
     TSQueue *ts_queue;
     EventQueue *event_queue;
 };
@@ -259,6 +260,7 @@ void *listener(void *arg)
 void *receiver(void *arg)
 {
     int client_fd, *pclient_fd;
+    int filter_error;
     struct Message *msg;
 
     while (1) {
@@ -270,6 +272,13 @@ void *receiver(void *arg)
         if ((msg = receive(client_fd)) == NULL) {
             return NULL;
         }
+	if (((struct ReceiverArg *) arg)->filter != NULL) {
+		filter_error = (*((struct ReceiverArg *) arg)->filter)(msg);
+		if (filter_error) {
+			fprintf(stderr, "filter error");
+			return NULL;
+		}
+	}
         free(pclient_fd);
         if (event_queue_enqueue(((struct ReceiverArg *) arg)->event_queue, msg) != 0) {
             return NULL;
@@ -277,7 +286,7 @@ void *receiver(void *arg)
     }
 }
 
-Inputs *start(int port, int threads)
+Inputs *start(int port, int (*filter)(struct Message *), int threads)
 {
     struct ListenerArg *listener_arg;
     struct ReceiverArg *receiver_arg;
@@ -313,6 +322,7 @@ Inputs *start(int port, int threads)
     }
     receiver_arg->ts_queue = ts_queue;
     receiver_arg->event_queue = event_queue;
+    receiver_arg->filter = filter;
 
     if (pthread_create(&thread, NULL, &listener, listener_arg) != 0) {
         perror(NULL);

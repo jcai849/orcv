@@ -13,4 +13,4 @@ typedef struct Message {
 Message *receive(int);
 int send_data(const char *addr, int port, struct Data *);
 int send_message(struct Message *);
-Inputs *start(int, int);
+Inputs *start(int, int (*)(struct Message *), int);
