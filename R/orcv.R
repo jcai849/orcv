@@ -1,14 +1,14 @@
 CONTROL <- new.env(parent=emptyenv(), size=1L)
 start <- function(port, threads=getOption("orcv.cores", 4L)) {
-    stopifnot(is.integer(port), is.integer(threads))
-    control <- .Call(C_start, port, threads)
+    stopifnot(is.numeric(port), is.numeric(threads))
+    control <- .Call(C_start, as.integer(port), as.integer(threads))
     if (is.null(control)) stop()
     invisible(assign("control", control, CONTROL))
 }
 event_push <- function(value, address, port) {
-    stopifnot(is.character(address), is.integer(port))
+    stopifnot(is.character(address), is.numeric(port))
     serialised <- serialize(value, NULL)
-    fd <- .Call(C_send, address, port, serialised)
+    fd <- .Call(C_send, address, as.integer(port), serialised)
     if (fd == -1) stop()
     invisible(fd)
 }
