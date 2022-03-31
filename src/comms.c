@@ -13,6 +13,7 @@
 #define MAX_RECV_SIZE (1024*1024*128)
 #define MAX_SEND_SIZE (1024*1024*128)
 #define BACKLOG 10
+#define CONN_SLEEP 1
 
 struct ListenerArg {
     int port;
@@ -131,8 +132,9 @@ int send_message(struct Message *msg) {
 int send_data(const char *addr, int port, Data *data)
 {
     struct addrinfo hints, *res;
-    int addr_error, retcode;
+    int addr_error;
     int sockfd;
+    int no_connect, reconnections = 0;
     char *string_port;
     Message msg;
 
@@ -150,16 +152,20 @@ int send_data(const char *addr, int port, Data *data)
         return -1;
     }
     free(string_port);
-    sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-    if (sockfd == -1) {
-        perror(NULL);
-        return -1;
-    }
-    retcode = connect(sockfd, res->ai_addr, res->ai_addrlen);
-    if (retcode == -1) {
-        perror(NULL);
-        return -1;
-    }
+	do {
+		sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+		if (sockfd == -1) {
+			perror(NULL);
+			return -1;
+		}
+		no_connect = connect(sockfd, res->ai_addr, res->ai_addrlen);
+		if (no_connect) {
+			perror(NULL);
+			fprintf(stderr, "Attempting reconnect to %s port %d (attempt #%d)\n", addr, port, ++reconnections);
+			close(sockfd);
+			sleep(CONN_SLEEP);
+		}
+	} while (no_connect);
 
     msg.connection = sockfd;
     msg.data = data;

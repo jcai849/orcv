@@ -18,7 +18,7 @@ suppressPackageStartupMessages(library(orcv))
 PORT <- 12345L
 
 start(PORT)
-Sys.sleep(1)
+#Sys.sleep(1)
 
 fd <- event_push(1:10, "localhost", 12346L)
 monitor_response(fd)
