@@ -4,3 +4,4 @@
 *.out
 *.so
 tags
+*-flow.svg
