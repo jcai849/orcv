@@ -1,4 +1,4 @@
-SRCS= comms.c thread-safe-queue.c event-queue.c multiplex.c inputs.c queue.c
+SRCS= start.c thread-safe-queue.c queue.c
 OBJS:=${SRCS:S/.c/.o/g}
 ARFLAGS=rcs
 CFLAGS=-g -Wall -Wextra -pipe -O0
