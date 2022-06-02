@@ -5,3 +5,4 @@
 *.so
 tags
 *-flow.svg
+src/html
