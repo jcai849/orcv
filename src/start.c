@@ -202,3 +202,8 @@ int send_data(int sockfd, void *data, int len)
         return 0;
 }
 
+void delete_message(Message *msg) {
+	free(msg->header);
+	free(msg->payload);
+	free(msg);
+}

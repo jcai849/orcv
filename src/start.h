@@ -21,8 +21,11 @@ typedef struct Message {
 
 int start(int, int);
 void *listener(void *arg);
+void *receiver(void *arg);
+Message next_event(void);
+
+Message *receive_message(int fd);
+int receive_data(int, void *, int);
 int send_message(struct Message);
 int send_data(int, void *, int);
-void *receiver(void *arg);
-Message receive(int fd);
-Message next_event(void);
+void delete_message(Message *msg);
