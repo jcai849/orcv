@@ -1,8 +1,8 @@
 #include <Rinternals.h>
 #include <R.h>
-#include <unistd.h>
-#include "multiplex.h"
+#include "start.h"
 
+/*
 SEXP C_start(SEXP port, SEXP threads)
 {
     int c_port, c_threads;
@@ -123,3 +123,4 @@ SEXP C_close_connection(SEXP fd)
     UNPROTECT(1);
     return status;
 }
+*/

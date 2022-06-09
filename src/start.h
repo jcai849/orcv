@@ -5,4 +5,4 @@
 int start(int, int);
 void *listener(void *arg);
 void *receiver(void *arg);
-Message next_event(void);
+Message *next_event(void);

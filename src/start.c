@@ -1,3 +1,7 @@
+#include <string.h>
+#include <sys/socket.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include "start.h"
 #include "tsqueue.h"
 
@@ -5,13 +9,11 @@ TSQueue *fd_queue, *event_queue;
 
 int start(int port, int threads)
 {
-	struct ListenerArg *listener_arg;
-	struct ReceiverArg *receiver_arg;
 	pthread_t thread;
 	pthread_barrier_t listener_barrier;
 	pthread_barrierattr_t bar_attr;
-	int *communicated_port;
 	int barrier_error;
+	int i;
 
 	set_port(port);
 	if_error(tsqueue_init(fd_queue), -1);
@@ -25,7 +27,7 @@ int start(int port, int threads)
 
 	barrier_error = pthread_barrier_wait(&listener_barrier);
 	if_error(barrier_error != 0 && barrier_error != PTHREAD_BARRIER_SERIAL_THREAD, -1);
-	if_error(pthread_barrierattr_destroy(bar_attr), -1);
+	if_error(pthread_barrierattr_destroy(&bar_attr), -1);
 	if_error(pthread_barrier_destroy(&listener_barrier), -1);
 
 	return 0;
@@ -34,7 +36,7 @@ int start(int port, int threads)
 void *listener(void *arg)
 {
 	int listenfd, connfd, *queuedfd;
-	struct sockaddr_in serv_addr, ;
+	struct sockaddr_in serv_addr;
 	socklen_t serv_addrlen;
 	int barrier_error;
 	
@@ -45,10 +47,10 @@ void *listener(void *arg)
 #endif
 	int yes = 1;
 
-	memset(&servaddr, 0, sizeof servaddr);
-	servaddr.sin_family = AF_INET;
-	servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-	servaddr.sin_port = htons(get_port());
+	memset(&serv_addr, 0, sizeof serv_addr);
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	serv_addr.sin_port = htons(get_port());
         if_error((listenfd = socket(AF_INET, SOCK_STREAM, 0)) == -1, NULL);
         if_error(setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1, NULL);
         if_error(bind(listenfd, (struct sockaddr *) &serv_addr,  sizeof(serv_addr)) == -1, NULL);
@@ -73,7 +75,7 @@ void *listener(void *arg)
 		inet_ntop(client_addr.ss_family, get_in_addr((struct sockaddr *) &client_addr), s, sizeof(s));
 		printf("got connection from %s\n", s);
 #endif
-		if_error((queuedfd = malloc(sizeof(*queued_fd))) == NULL, NULL);
+		if_error((queuedfd = malloc(sizeof(*queuedfd))) == NULL, NULL);
 		*queuedfd = connfd;
 		if_error(tsqueue_enqueue(fd_queue, queuedfd), NULL);
 	}
@@ -85,9 +87,9 @@ void *receiver(void *arg)
 	Message *msg;
 
 	while (1) {
-		if_error(client_fd = tsqueue_dequeue(fd_queue), NULL);
+		if_error((client_fd = tsqueue_dequeue(fd_queue)) == NULL, NULL);
 		if_error((msg = receive_message(*client_fd)) == NULL, NULL);
-		if_error(close(client_fd) == -1, NULL);
+		if_error(close(*client_fd) == -1, NULL);
 		*client_fd = -1;
 		free(client_fd);
 		if_error(tsqueue_enqueue(event_queue, msg), NULL);
