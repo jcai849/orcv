@@ -2,7 +2,7 @@
 #include <unistd.h>
 #include <pthread.h>
 
-#include "../src/thread-safe-queue.h"
+#include "../src/tsqueue.h"
 
 int test_unused(void)
 {

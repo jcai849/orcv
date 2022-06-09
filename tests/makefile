@@ -10,7 +10,7 @@ LDFLAGS= -lpthread ../src/liborcv.a
 .R.test:
 	Rscript ${.IMPSRC}
 
-test: queue.test thread-safe-queue.test event-queue.test inputs.test comms.test multiplex.test interface.test
+test: queue.test tsqueue.test comms.test interface.test
 
 clean:
 	rm -f *.out
