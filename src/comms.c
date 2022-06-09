@@ -1,5 +1,8 @@
-#include <netinet/in.h>
 #include <stdlib.h>
+#include <sys/socket.h>
+#include <errno.h>
+#include <string.h>
+#include <unistd.h>
 #include "comms.h"
 
 in_addr_t self_address; /* both stored as  */
@@ -30,14 +33,14 @@ Message *receive_message(int fd)
         Message *msg;
 
         if_error((msg = malloc(sizeof(* msg))) == NULL, NULL);
-        if_error(recv(fd, &msg->addr, sizeof msg->addr) != sizeof msg->addr, NULL);
+        if_error(recv(fd, &msg->addr, sizeof msg->addr, 0) != sizeof msg->addr, NULL);
         msg->addr = ntohl(msg->addr);
-        if_error(recv(fd, &msg->port, sizeof msg->port) != sizeof msg->port, NULL);
+        if_error(recv(fd, &msg->port, sizeof msg->port, 0) != sizeof msg->port, NULL);
         msg->port = ntohl(msg->port);
-        if_error(recv(fd, &msg->header_size, sizeof msg->header_size) != sizeof msg->header_size, NULL);
+        if_error(recv(fd, &msg->header_size, sizeof msg->header_size, 0) != sizeof msg->header_size, NULL);
         if_error((msg->header = malloc(msg->header_size)) == NULL, NULL);
         if_error(receive_data(fd, msg->header, msg->header_size), NULL);
-        if_error(recv(fd, &msg->payload_size, sizeof msg->payload_size) != sizeof msg->payload_size, NULL);
+        if_error(recv(fd, &msg->payload_size, sizeof msg->payload_size, 0) != sizeof msg->payload_size, NULL);
         if_error((msg->payload = malloc(msg->payload_size)) == NULL, NULL);
         if_error(receive_data(fd, msg->payload, msg->payload_size), NULL);
 
@@ -48,7 +51,6 @@ Message *receive_message(int fd)
 int receive_data(int sockfd, void *data, int len)
 {
         int i = 0, n, need;
-        void *data;
 
         while (i < len) {
                 need = (len - i > MAX_RECV_SIZE) ? MAX_RECV_SIZE : (len - i);
@@ -75,29 +77,33 @@ int send_message(Message msg)
         int sockfd;
         int no_connect, reconnections = 0;
         struct sockaddr_in servaddr;
+	uint32_t n_addr;
+	uint16_t n_port;
 
         memset(&servaddr, 0, sizeof servaddr);
         servaddr.sin_family = AF_INET;
         servaddr.sin_port = htons(msg.port);
-        servaddr.sin_addr = htons(msg.addr);
+        servaddr.sin_addr.s_addr = htons(msg.addr);
         do {
                 if_error((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1, -1);
-                no_connect = connect(sockfd, (sockaddr *) &servaddr, sizeof(servaddr));
+                no_connect = connect(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
                 if (no_connect) {
                         perror(NULL);
-                        if_error(fprintf(stderr, "Attempting reconnect to %s port %d (attempt #%d)\n", addr, port, ++reconnections) < 0,
+                        if_error(fprintf(stderr, "Attempting reconnect to %d port %d (attempt #%d)\n", msg.addr, msg.port, ++reconnections) < 0,
  -1);
                         if_error(close(sockfd) == -1, -1);
                         sleep(CONN_SLEEP);
                 }
         } while (no_connect);
 
-        if_error(send(sockfd, &htonl(self_addr), sizeof self_addr, 0) != sizeof self_addr, -1);
-        if_error(send(sockfd, &htons(self_port), sizeof self_port, 0) != sizeof self_port, -1);
+	n_addr = htonl(self_address);
+	n_port = htons(self_port);
+        if_error(send(sockfd, &n_addr, sizeof n_addr, 0) != sizeof n_addr, -1);
+        if_error(send(sockfd, &n_port, sizeof n_port, 0) != sizeof n_port, -1);
         if_error(send(sockfd, &msg.header_size, sizeof msg.header_size, 0) != sizeof msg.header_size, -1);
-        if_error(send_data(sockfd, msg.header, header_size, 0) == -1, -1);
+        if_error(send_data(sockfd, msg.header, msg.header_size) == -1, -1);
         if_error(send(sockfd, &msg.payload_size, sizeof msg.payload_size, 0) != sizeof msg.payload_size, -1);
-        if_error(send_data(sockfd, msg.payload, payload_size, 0) == -1, -1);
+        if_error(send_data(sockfd, msg.payload, msg.payload_size) == -1, -1);
 
         if_error(close(sockfd) == -1, -1);
         sockfd = -1;

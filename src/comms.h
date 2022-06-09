@@ -1,11 +1,18 @@
 #define MAX_SEND_SIZE (1024*1024*128)
+#define MAX_RECV_SIZE (1024*1024*128)
 #define CONN_SLEEP 1
+#include <stdio.h>
+#include <netinet/in.h>
 
-#ifdef NDEBUG
-#define if_error(x, y) x;
+/*
+#ifdef DNDEBUG
+#define if_error(x, y) x
 # else
+*/
 #define if_error(x, y) if(x) {perror("error"); return y;}
+/*
 #endif
+*/
 
 typedef struct Message {
         in_addr_t addr;
