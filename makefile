@@ -1,5 +1,5 @@
 .PHONY: tags install clean tests
-all: clean tags install clean tests
+all: clean install clean tests
 install: R/orcv.R src/*.c src/*.h
 	R CMD INSTALL .
 tests: src/liborcv.a
