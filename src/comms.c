@@ -32,6 +32,7 @@ Message *receive_message(int fd)
 {
         Message *msg;
 
+	msg->fd = fd;
         if_error((msg = malloc(sizeof(* msg))) == NULL, NULL);
         if_error(recv(fd, &msg->addr, sizeof msg->addr, 0) != sizeof msg->addr, NULL);
         msg->addr = ntohl(msg->addr);
@@ -105,10 +106,7 @@ int send_message(Message msg)
         if_error(send(sockfd, &msg.payload_size, sizeof msg.payload_size, 0) != sizeof msg.payload_size, -1);
         if_error(send_data(sockfd, msg.payload, msg.payload_size) == -1, -1);
 
-        if_error(close(sockfd) == -1, -1);
-        sockfd = -1;
-
-        return 0;
+        return sockfd;
 }
 
 int send_data(int sockfd, void *data, int len)

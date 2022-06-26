@@ -89,8 +89,6 @@ void *receiver(void *arg)
 	while (1) {
 		if_error((client_fd = tsqueue_dequeue(fd_queue)) == NULL, NULL);
 		if_error((msg = receive_message(*client_fd)) == NULL, NULL);
-		if_error(close(*client_fd) == -1, NULL);
-		*client_fd = -1;
 		free(client_fd);
 		if_error(tsqueue_enqueue(event_queue, msg), NULL);
 	}

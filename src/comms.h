@@ -15,6 +15,7 @@
 */
 
 typedef struct Message {
+	int fd;
         in_addr_t addr;
         in_port_t port;
         int header_size;
