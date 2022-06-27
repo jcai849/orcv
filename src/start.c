@@ -5,7 +5,7 @@
 #include "start.h"
 #include "tsqueue.h"
 
-TSQueue *fd_queue, *event_queue;
+TSQueue fd_queue, event_queue;
 
 int start(int port, int threads)
 {
@@ -16,8 +16,8 @@ int start(int port, int threads)
 	int i;
 
 	set_port(port);
-	if_error(tsqueue_init(fd_queue), -1);
-	if_error(tsqueue_init(event_queue), -1);
+	if_error(tsqueue_init(&fd_queue), -1);
+	if_error(tsqueue_init(&event_queue), -1);
 	if_error(pthread_barrierattr_init(&bar_attr), -1);
 	if_error(pthread_barrier_init(&listener_barrier, &bar_attr, 2), -1);
 	if_error(pthread_create(&thread, NULL, &listener, &listener_barrier), -1);
@@ -55,10 +55,13 @@ void *listener(void *arg)
         if_error(setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1, NULL);
         if_error(bind(listenfd, (struct sockaddr *) &serv_addr,  sizeof(serv_addr)) == -1, NULL);
 	if_error(listen(listenfd, BACKLOG) == -1, NULL);
+
+	memset(&serv_addr, 0, sizeof serv_addr);
 	if_error(getsockname(listenfd, (struct sockaddr *) &serv_addr, &serv_addrlen), NULL);
 	if_error(serv_addrlen != sizeof(serv_addr), NULL);
 	set_address(ntohl(serv_addr.sin_addr.s_addr));
 	set_port(ntohs(serv_addr.sin_port));
+	printf("server bound to address %d port %d\n", ntohl(serv_addr.sin_addr.s_addr), ntohs(serv_addr.sin_port));
 
 	barrier_error = pthread_barrier_wait((pthread_barrier_t *) arg);
 	if_error(barrier_error != 0 && barrier_error != PTHREAD_BARRIER_SERIAL_THREAD, NULL);
@@ -77,7 +80,7 @@ void *listener(void *arg)
 #endif
 		if_error((queuedfd = malloc(sizeof(*queuedfd))) == NULL, NULL);
 		*queuedfd = connfd;
-		if_error(tsqueue_enqueue(fd_queue, queuedfd), NULL);
+		if_error(tsqueue_enqueue(&fd_queue, queuedfd), NULL);
 	}
 }
 
@@ -87,14 +90,14 @@ void *receiver(void *arg)
 	Message *msg;
 
 	while (1) {
-		if_error((client_fd = tsqueue_dequeue(fd_queue)) == NULL, NULL);
+		if_error((client_fd = tsqueue_dequeue(&fd_queue)) == NULL, NULL);
 		if_error((msg = receive_message(*client_fd)) == NULL, NULL);
 		free(client_fd);
-		if_error(tsqueue_enqueue(event_queue, msg), NULL);
+		if_error(tsqueue_enqueue(&event_queue, msg), NULL);
 	}
 }
 
 Message *next_event(void)
 {
-	return (Message *) tsqueue_dequeue(event_queue);
+	return (Message *) tsqueue_dequeue(&event_queue);
 }
