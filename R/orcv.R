@@ -1,65 +1,61 @@
-CONTROL <- new.env(parent=emptyenv(), size=1L)
+header <- function(x, ...) UseMethod("header", x)
+payload <- function(x, ...) UseMethod("payload", x)
+fd <- function(x, ...) UseMethod("fd", x)
+send <- function(x, ...) UseMethod("send", x)
+location <- function(x, ...) {
+	if (missing(x)) {
+		as.Location(.Call(C_location)) 
+	} else UseMethod("location", x)
+}
+address <- function(x, ...) UseMethod("address", x)
+port <- function(x, ...) UseMethod("port", x)
+
 start <- function(port, threads=getOption("orcv.cores", 4L)) {
-    stopifnot(is.numeric(port), is.numeric(threads))
-    control <- .Call(C_start, as.integer(port), as.integer(threads))
-    if (is.null(control)) stop()
-    invisible(assign("control", control, CONTROL))
+	stopifnot(is.integer(port), is.integer(threads))
+	invisible(.Call(C_start, port, threads))
 }
-event_push <- function(value, address, port) {
-    stopifnot(is.character(address), is.numeric(port))
-    serialised <- serialize(value, NULL)
-    fd <- .Call(C_send, address, as.integer(port), serialised)
-    if (fd == -1) stop()
-    invisible(fd)
+
+as.Location <- function(x) {
+	stopifnot(is.integer(x), length(x) == 2L)
+	names(x) <- c("address", "port")
+	class(x) <- "Location"
+	x
 }
-event_pop <- function() {
-    control <- get("control", CONTROL)
-    event <- .Call(C_multiplex, control)
-    if (is.null(event)) stop()
-    names(event) <- c("data", "fd")
-    event$data <- unserialize(event$data)
-    invisible(event)
+send.Location <- function(x, header, payload) {
+	fd <- as.FD(.Call(C_get_socket, address(x), port(x)))
+	error <- send(fd, header, payload)
+	if (error) error else fd
 }
-is.event <- function(x) inherits(x, "Event")
-respond <- function(x, value) UseMethod("respond")
-respond.Event <- function(x, value) respond(x$fd, value)
-respond.integer <- function(x, value) {
-    serialised <- serialize(value, NULL)
-    status <- .Call(C_respond, x, serialised)
-    if (status == -1) stop()
-    invisible(status)
+address.Location <- function(x, ...) x$address
+port.Location <- function(x, ...) x$port
+
+as.FD <- function(x) {
+	stopifnot(is.integer(x))
+	class(x) <- "FD"
+	x
 }
-monitor_response <- function(x, ...) UseMethod("monitor_response")
-monitor_response.Event <- function(x, ...)  monitor_response(x$fd)
-monitor_response.integer <- function(x, ...) {
-    control <- get("control", CONTROL)
-    status <- .Call(C_monitor_response, control, x)
-    if (status != 0) stop()
-    invisible(status)
+send.FD <- function(x, header, payload) {
+	stopifnot(is.character(header))
+	serialised_payload <- serialize(payload, NULL)
+	invisible(.Call(C_send_socket, x, header, serialised_payload))
 }
-await_response <- function(x, ...) UseMethod("await_response")
-await_response.Event <- function(x, ...)  await_response(x$fd)
-await_response.integer <- function(x, ...) {
-    event <- .Call(C_await_response, x)
-    if (is.null(event)) stop()
-    names(event) <- c("data", "fd")
-    event$data <- unserialize(event$data)
-    invisible(event)
+close.FD <- function(con, ...) .Call(C_close_socket, con)
+
+next_message <- function() {
+	msg <- .Call(C_next_message)
+	as.Message(msg)
 }
-event_complete <- function(x, ...) UseMethod("event_complete")
-event_complete.integer <- function(x, ...) {
-    status <- .Call(C_close_connection, x)
-    if (status != 0) stop()
-    invisible(status)
+as.Message <- function(x, ...) {
+	stopifnot(is.list(x), length(x) == 4)
+	names(msg) <- c("fd", "loc", "header", "payload")
+	msg$fd <- as.FD(msg$fd)
+	msg$loc <- as.Location(msg$loc)
+	msg$payload <- unserialize(msg$payload)
+	class(msg) <- "Message"
+	msg
 }
-event_complete.Event <- function(x, ...) {
-    status <- 0
-    if (!is.null(x$fd)) {
-        status <- event_complete(x$fd)
-    }
-    invisible(status)
-}
-# stop <- function() {
-#     control <- get("control", CONTROL)
-#     .Call(C_stop, control)
-# }
+header.Message <- function(x, ...) x$header
+payload.Message <- function(x, ...) x$payload
+location.Message <- function(x, ...) x$loc
+fd.Message <- function(x, ...) x$fd
+close.Message <- function(con, ...) close(fd(con))

@@ -1,13 +1,32 @@
-# useDynLib(orcv, C_start, C_send, C_multiplex, C_respond, C_monitor_response, C_await_response, C_close_connection)
-export(start,
-       event_push, event_pop,
-       respond, monitor_response, await_response,
-       event_complete)
-S3method(respond, integer)
-S3method(respond, Event)
-S3method(monitor_response, integer)
-S3method(monitor_response, Event)
-S3method(await_response, integer)
-S3method(await_response, Event)
-S3method(event_complete, integer)
-S3method(event_complete, Event)
+useDynLib(orcv,
+	C_start,
+	C_next_message,
+	C_send_socket,
+	C_get_socket,
+	C_close_socket,
+	C_location
+)
+export(
+	start,
+	next_message,
+	send,
+	location,
+	header,
+	payload,
+	fd,
+	address,
+	port
+)
+
+S3method(header, Message)
+S3method(payload, Message)
+S3method(location, Message)
+S3method(fd, Message)
+S3method(close, Message)
+
+S3method(send, FD)
+S3method(close, FD)
+
+S3method(send, Location)
+S3method(address, Location)
+S3method(port, Location)

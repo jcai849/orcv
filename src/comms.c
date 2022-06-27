@@ -39,7 +39,7 @@ Message *receive_message(int fd)
         if_error(recv(fd, &msg->port, sizeof msg->port, 0) != sizeof msg->port, NULL);
         msg->port = ntohl(msg->port);
         if_error(recv(fd, &msg->header_size, sizeof msg->header_size, 0) != sizeof msg->header_size, NULL);
-        if_error((msg->header = malloc(msg->header_size)) == NULL, NULL);
+        if_error((msg->header = calloc(msg->header_size, sizeof &msg->header)) == NULL, NULL);
         if_error(receive_data(fd, msg->header, msg->header_size), NULL);
         if_error(recv(fd, &msg->payload_size, sizeof msg->payload_size, 0) != sizeof msg->payload_size, NULL);
         if_error((msg->payload = malloc(msg->payload_size)) == NULL, NULL);
@@ -73,7 +73,7 @@ int receive_data(int sockfd, void *data, int len)
         return 0;
 }
 
-int send_message(Message msg)
+int get_socket(int addr, int port)
 {
         int sockfd;
         int no_connect, reconnections = 0;
@@ -83,33 +83,40 @@ int send_message(Message msg)
 
         memset(&servaddr, 0, sizeof servaddr);
         servaddr.sin_family = AF_INET;
-        servaddr.sin_port = htons(msg.port);
-        servaddr.sin_addr.s_addr = htons(msg.addr);
+        servaddr.sin_port = htons(port);
+        servaddr.sin_addr.s_addr = htons(addr);
         do {
                 if_error((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1, -1);
                 no_connect = connect(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
                 if (no_connect) {
                         perror(NULL);
-                        if_error(fprintf(stderr, "Attempting reconnect to %d port %d (attempt #%d)\n", msg.addr, msg.port, ++reconnections) < 0,
+                        if_error(fprintf(stderr, "Attempting reconnect to %d port %d (attempt #%d)\n", addr, port, ++reconnections) < 0,
  -1);
                         if_error(close(sockfd) == -1, -1);
                         sleep(CONN_SLEEP);
                 }
         } while (no_connect);
 
-	n_addr = htonl(self_address);
-	n_port = htons(self_port);
-        if_error(send(sockfd, &n_addr, sizeof n_addr, 0) != sizeof n_addr, -1);
-        if_error(send(sockfd, &n_port, sizeof n_port, 0) != sizeof n_port, -1);
-        if_error(send(sockfd, &msg.header_size, sizeof msg.header_size, 0) != sizeof msg.header_size, -1);
-        if_error(send_data(sockfd, msg.header, msg.header_size) == -1, -1);
-        if_error(send(sockfd, &msg.payload_size, sizeof msg.payload_size, 0) != sizeof msg.payload_size, -1);
-        if_error(send_data(sockfd, msg.payload, msg.payload_size) == -1, -1);
-
         return sockfd;
 }
 
-int send_data(int sockfd, void *data, int len)
+int send_socket(int sockfd, int header_size, const char *header, int payload_size, unsigned char *payload)
+{
+	int addr, port;
+
+	addr = htonl(self_address);
+	port = htons(self_port);
+        if_error(send(sockfd, &addr, sizeof addr, 0) != sizeof addr, -1);
+        if_error(send(sockfd, &port, sizeof port, 0) != sizeof port, -1);
+        if_error(send(sockfd, &header_size, sizeof header_size, 0) != sizeof header_size, -1);
+        if_error(send_data(sockfd, header, header_size) == -1, -1);
+        if_error(send(sockfd, &payload_size, sizeof payload_size, 0) != sizeof payload_size, -1);
+        if_error(send_data(sockfd, payload, payload_size) == -1, -1);
+
+        return 0;
+}
+
+int send_data(int sockfd, const void *data, int len)
 {
         int i = 0, need, n;
 

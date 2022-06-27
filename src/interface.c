@@ -1,126 +1,102 @@
-#include <Rinternals.h>
-#include <R.h>
+#include <unistd.h>
+
+#include "interface.h"
 #include "start.h"
 
-/*
 SEXP C_start(SEXP port, SEXP threads)
 {
-    int c_port, c_threads;
-    Inputs *control;
+	int c_port, c_threads;
+	SEXP error;
 
-    c_port = INTEGER(port)[0];
-    c_threads = INTEGER(threads)[0];
-    control = start(c_port, NULL, c_threads);
-    if (control == NULL) {
-        return R_NilValue;
-    }
-    return R_MakeExternalPtr(control, R_NilValue, R_NilValue);
+	c_port = INTEGER(port)[0];
+	c_threads = INTEGER(threads)[0];
+	error = PROTECT(allocVector(INTSXP, 1));
+	INTEGER(error)[0] = start(c_port, c_threads);
+
+	UNPROTECT(1);
+	return error;
 }
 
-SEXP C_send(SEXP address, SEXP port, SEXP serialised)
+SEXP C_next_message(void)
 {
-    Data data;
-    const char *c_address;
-    int c_port;
-    SEXP fd;
+	Message *event;
+	SEXP msg, fd, loc, header, payload;
 
-    data.data = RAW(serialised);
-    data.size = LENGTH(serialised);
-    c_address = CHAR(STRING_ELT(address, 0));
-    c_port = INTEGER(port)[0];
-    fd = PROTECT(allocVector(INTSXP, 1));
-    INTEGER(fd)[0] = send_data(c_address, c_port, &data);
-    UNPROTECT(1);
-    return fd;
+	event = next_event();
+
+	msg = PROTECT(allocVector(VECSXP, 5));
+	fd = PROTECT(allocVector(INTSXP, 1));
+	loc = PROTECT(allocVector(INTSXP, 2));
+	header = PROTECT(allocVector(STRSXP, 1));
+	payload = PROTECT(allocVector(RAWSXP, event->payload_size));
+
+	INTEGER(fd)[0] = event->fd;
+	INTEGER(loc)[0] = event->addr;
+	INTEGER(loc)[1] = event->port;
+	SET_STRING_ELT(header, 0, mkChar(event->header));
+	memcpy(RAW(payload), event->payload, event->payload_size);
+
+	SET_VECTOR_ELT(msg, 0, fd);
+	SET_VECTOR_ELT(msg, 1, loc);
+	SET_VECTOR_ELT(msg, 2, header);
+	SET_VECTOR_ELT(msg, 3, payload);
+
+	delete_message(event);
+	UNPROTECT(5);
+	return msg;
 }
 
-SEXP R_event_from_msg(Message *message)
+SEXP C_send_socket(SEXP fd, SEXP header, SEXP payload)
 {
-    SEXP data, event, fd, class;
+	int c_fd;
+	int header_size, payload_size;
+	char *c_payload;
+	const char *c_header;
+	SEXP error;
+	
+	c_fd = INTEGER(fd)[0];
+	header_size = LENGTH(header);
+	c_header = CHAR(STRING_ELT(header, 0));
+	payload_size = LENGTH(payload);
+	c_payload = RAW(payload);
 
-    data = PROTECT(allocVector(RAWSXP, message->data->size));
-    memcpy(RAW(data), message->data->data, message->data->size);
-    free(message->data->data);
-    free(message->data);
+	error = PROTECT(allocVector(INTSXP, 1));
+	INTEGER(error)[0] = send_socket(c_fd, header_size, c_header, payload_size, c_payload);
 
-    fd = PROTECT(allocVector(INTSXP, 1));
-    INTEGER(fd)[0] = message->connection;
-    free(message);
-
-    event = PROTECT(allocVector(VECSXP, 2));
-    SET_VECTOR_ELT(event, 0, data);
-    SET_VECTOR_ELT(event, 1, fd);
-
-    class = PROTECT(allocVector(STRSXP, 1));
-    SET_STRING_ELT(class, 0, mkChar("Event"));
-    classgets(event, class);
-
-    UNPROTECT(4);
-    return event;
+	UNPROTECT(1);
+	return error;
 }
 
-SEXP C_multiplex(SEXP control)
+SEXP C_get_socket(SEXP addr, SEXP port)
 {
-    Inputs *inputs;
-    struct Message *message;
+	SEXP fd;
+	
+	fd = PROTECT(allocVector(INTSXP, 1));
+	INTEGER(fd)[0] = get_socket(INTEGER(addr)[0], INTEGER(port)[0]);
 
-    inputs = R_ExternalPtrAddr(control);
-    if ((message = multiplex(inputs)) == NULL) {
-        return R_NilValue;
-    }
-    return R_event_from_msg(message);
+	UNPROTECT(1);
+	return fd;
 }
 
-SEXP C_respond(SEXP fd, SEXP serialised)
+SEXP C_close_socket(SEXP fd)
 {
-    Data data;
-    Message message;
-    SEXP status;
+	SEXP error;
 
-    data.data = RAW(serialised);
-    data.size = LENGTH(serialised);
-    message.data = &data;
-    message.connection = INTEGER(fd)[0];
-    status = PROTECT(allocVector(INTSXP, 1));
-    INTEGER(status)[0] = send_message(&message);
-    UNPROTECT(1);
-    return status;
+	error = PROTECT(allocVector(INTSXP, 1));
+	INTEGER(error)[0] = close(INTEGER(fd)[0]);
+
+	UNPROTECT(1);
+	return error;
 }
 
-SEXP C_monitor_response(SEXP control, SEXP fd)
+SEXP C_location(void)
 {
-    Inputs *inputs;
-    int connection;
-    SEXP status;
+	SEXP loc;
 
-    inputs = R_ExternalPtrAddr(control);
-    connection = INTEGER(fd)[0];
-    status = PROTECT(allocVector(INTSXP, 1));
-    INTEGER(status)[0] = inputs_insert_fd(inputs, connection);
-    UNPROTECT(1);
-    return status;
+	loc = PROTECT(allocVector(INTSXP, 2));
+	INTEGER(loc)[0] = get_address();
+	INTEGER(loc)[1] = get_port();
+
+	UNPROTECT(2);
+	return loc;
 }
-
-SEXP C_await_response(SEXP fd)
-{
-    Message *msg;
-    SEXP status;
-
-    if ((msg = receive(INTEGER(fd)[0])) == NULL) {
-        return R_NilValue;
-    }
-    return R_event_from_msg(msg);
-}
-
-SEXP C_close_connection(SEXP fd)
-{
-    SEXP status;
-
-    status = PROTECT(allocVector(INTSXP, 1));
-    if ((INTEGER(status)[0] = close(INTEGER(fd)[0])) != 0) {
-        perror(NULL);
-    }
-    UNPROTECT(1);
-    return status;
-}
-*/
