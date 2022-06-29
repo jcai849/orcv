@@ -6,9 +6,11 @@ address <- function(x, ...) UseMethod("address", x)
 port <- function(x, ...) UseMethod("port", x)
 location <- function(x, ...) if (missing(x)) as.Location(.Call(C_location)) else UseMethod("location", x)
 
-start <- function(port=0L, threads=getOption("orcv.cores", 4L)) {
-	stopifnot(is.integer(port), is.integer(threads))
-	invisible(.Call(C_start, port, threads))
+start <- function(address=NULL, port=0L, threads=getOption("orcv.cores", 4L)) {
+	stopifnot(is.character(address) || is.null(address),
+		  is.integer(port),
+		  is.integer(threads))
+	invisible(.Call(C_start, address, port, threads))
 }
 
 as.Location <- function(x, ...) {
@@ -22,8 +24,8 @@ send.Location <- function(x, header, payload) {
 	error <- send(fd, header, payload)
 	if (error) error else fd
 }
-address.Location <- function(x, ...) x$address
-port.Location <- function(x, ...) x$port
+address.Location <- function(x, ...) x["address"]
+port.Location <- function(x, ...) x["port"]
 
 as.FD <- function(x, ...) {
 	stopifnot(is.integer(x))

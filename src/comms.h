@@ -28,6 +28,8 @@ in_port_t get_port(void);
 in_addr_t get_address(void);
 void set_port(in_port_t);
 void set_address(in_addr_t);
+in_addr_t first_avail_iface(void);
+in_addr_t address_from_string(const char *);
 Message *receive_message(int fd);
 int receive_data(int, void *, int);
 int get_socket(int addr, int port);

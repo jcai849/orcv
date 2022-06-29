@@ -3,7 +3,7 @@
 #include "interface.h"
 #include "start.h"
 
-SEXP C_start(SEXP port, SEXP threads)
+SEXP C_start(SEXP address, SEXP port, SEXP threads)
 {
 	int c_port, c_threads;
 	SEXP error;
@@ -11,7 +11,7 @@ SEXP C_start(SEXP port, SEXP threads)
 	c_port = INTEGER(port)[0];
 	c_threads = INTEGER(threads)[0];
 	error = PROTECT(allocVector(INTSXP, 1));
-	INTEGER(error)[0] = start(c_port, c_threads);
+	INTEGER(error)[0] = start(isNull(address) ? NULL : CHAR(STRING_ELT(address, 0)), c_port, c_threads);
 
 	UNPROTECT(1);
 	return error;
@@ -97,6 +97,6 @@ SEXP C_location(void)
 	INTEGER(loc)[0] = get_address();
 	INTEGER(loc)[1] = get_port();
 
-	UNPROTECT(2);
+	UNPROTECT(1);
 	return loc;
 }

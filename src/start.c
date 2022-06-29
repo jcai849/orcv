@@ -5,21 +5,24 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include <ifaddrs.h>
 #include "start.h"
 #include "tsqueue.h"
 
 TSQueue fd_queue, event_queue;
 
-int start(int port, int threads)
+int start(const char *address, int port, int threads)
 {
 	pthread_t thread;
 	pthread_barrier_t listener_barrier;
 	pthread_barrierattr_t bar_attr;
 	int barrier_error;
 	int i;
+	in_addr_t addr;
 
 	set_port(port);
+	addr = address ? address_from_string(address) : first_avail_iface();
+	if (addr == -1) return -1;
+	set_address(addr);
 	if_error(tsqueue_init(&fd_queue), -1);
 	if_error(tsqueue_init(&event_queue), -1);
 	if_error(pthread_barrierattr_init(&bar_attr), -1);
@@ -45,28 +48,9 @@ void *listener(void *arg)
 	int barrier_error;
 	int yes = 1;
 
-	struct ifaddrs *ifap, *ifa;
-
 	memset(&serv_addr, 0, sizeof serv_addr);
-	getifaddrs(&ifap);
-	for (ifa = ifap; ifa; ifa = ifa->ifa_next) {
-		if (ifa->ifa_addr &&
-		    ifa->ifa_addr->sa_family == AF_INET) /* then we can cast to sockaddr_in: */
-			if(((struct sockaddr_in *) ifa->ifa_addr)->sin_addr.s_addr != htonl(INADDR_LOOPBACK) &&
-			   ((struct sockaddr_in *) ifa->ifa_addr)->sin_addr.s_addr != htonl(INADDR_ANY)) {
-				break;
-		}
-		if (!ifa->ifa_next) {
-			perror("No interface found\n");
-			return NULL;
-		}
-	}
-	serv_addr.sin_addr.s_addr = ((struct sockaddr_in *) ifa->ifa_addr)->sin_addr.s_addr;
-	printf("address: %s\n", inet_ntoa(serv_addr.sin_addr));
-	freeifaddrs(ifap);
-	ifap = NULL;
-
 	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_addr.s_addr = htonl(get_address());
 	serv_addr.sin_port = htons(get_port());
         if_error((listenfd = socket(AF_INET, SOCK_STREAM, 0)) == -1, NULL);
         if_error(setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1, NULL);
@@ -74,9 +58,10 @@ void *listener(void *arg)
 	if_error(listen(listenfd, BACKLOG) == -1, NULL);
 
 	memset(&serv_addr, 0, sizeof serv_addr);
+	serv_addrlen = sizeof serv_addr;
 	if_error(getsockname(listenfd, (struct sockaddr *) &serv_addr, &serv_addrlen), NULL);
 	if_error(serv_addrlen != sizeof(serv_addr), NULL);
-	printf("server bound to address %s port %d\n", inet_ntoa(serv_addr.sin_addr), ntohs(serv_addr.sin_port));
+	printf("server bound to address %s at port %d\n", inet_ntoa(serv_addr.sin_addr), ntohs(serv_addr.sin_port));
 	set_address(ntohl(serv_addr.sin_addr.s_addr));
 	set_port(ntohs(serv_addr.sin_port));
 

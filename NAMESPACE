@@ -15,7 +15,8 @@ export(
 	payload,
 	fd,
 	address,
-	port
+	port,
+	as.Location
 )
 
 S3method(header, Message)

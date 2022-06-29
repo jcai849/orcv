@@ -3,6 +3,9 @@
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
+#include <ifaddrs.h>
+#include <sys/types.h>
+#include <netdb.h>
 #include "comms.h"
 
 in_addr_t self_address; /* both stored as  */
@@ -26,6 +29,56 @@ void set_port(in_port_t port)
 void set_address(in_addr_t addr)
 {
 	self_address = addr;
+}
+
+in_addr_t first_avail_iface(void)
+{
+        struct ifaddrs *ifap, *ifa;
+        in_addr_t addr;
+
+	getifaddrs(&ifap);
+        for (ifa = ifap; ifa; ifa = ifa->ifa_next) {
+                if (ifa->ifa_addr &&
+                    ifa->ifa_addr->sa_family == AF_INET) /* then we can cast to sockaddr_in: */
+                        if(((struct sockaddr_in *) ifa->ifa_addr)->sin_addr.s_addr != htonl(INADDR_LOOPBACK) &&
+                           ((struct sockaddr_in *) ifa->ifa_addr)->sin_addr.s_addr != htonl(INADDR_ANY)) {
+                                break;
+                }
+                if (!ifa->ifa_next) {
+                        perror("No interface found\n");
+                        return -1;
+                }
+        }
+        addr = ((struct sockaddr_in *) ifa->ifa_addr)->sin_addr.s_addr;
+        freeifaddrs(ifap);
+	return ntohl(addr);
+}
+
+in_addr_t address_from_string(const char *address)
+{
+	struct addrinfo hints, *result;
+	char service[16+1];
+	in_addr_t addr;
+	int error;
+
+	memset(&hints, 0, sizeof hints);
+	hints.ai_flags = AI_PASSIVE;
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_protocol = IPPROTO_TCP;
+
+	snprintf(service, 16+1, "%d", get_port());
+
+	error = getaddrinfo(address, service, &hints, &result);
+	if (error) {
+		perror(gai_strerror(error));
+		freeaddrinfo(result);
+		return -1;
+	}
+	addr = ((struct sockaddr_in *) result->ai_addr)->sin_addr.s_addr;
+	freeaddrinfo(result);
+
+	return ntohl(addr);
 }
 
 Message *receive_message(int fd)
