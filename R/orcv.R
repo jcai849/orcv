@@ -24,8 +24,8 @@ send.Location <- function(x, header, payload) {
 	error <- send(fd, header, payload)
 	if (error) error else fd
 }
-address.Location <- function(x, ...) x["address"]
-port.Location <- function(x, ...) x["port"]
+address.Location <- function(x, ...) x[[1]]
+port.Location <- function(x, ...) x[[2]]
 
 as.FD <- function(x, ...) {
 	stopifnot(is.integer(x))
@@ -33,9 +33,10 @@ as.FD <- function(x, ...) {
 	x
 }
 send.FD <- function(x, header, payload) {
-	stopifnot(is.character(header))
+	stopifnot(is.character(header) && length(header) == 1)
 	serialised_payload <- serialize(payload, NULL)
-	invisible(.Call(C_send_socket, x, header, serialised_payload))
+	header_length <- nchar(header, type="bytes") + 1L
+	invisible(.Call(C_send_socket, x, header_length, header, serialised_payload))
 }
 close.FD <- function(con, ...) .Call(C_close_socket, con)
 

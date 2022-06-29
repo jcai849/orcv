@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
@@ -84,19 +85,30 @@ in_addr_t address_from_string(const char *address)
 Message *receive_message(int fd)
 {
         Message *msg;
+        struct sockaddr_in client_name;
+        socklen_t client_namelen = sizeof client_name;
 
+	getpeername(fd, (struct sockaddr *) &client_name, &client_namelen);
+	printf("Receiving message from %s\n", inet_ntoa(client_name.sin_addr));
+
+        if_error((msg = malloc(sizeof(*msg))) == NULL, NULL);
 	msg->fd = fd;
-        if_error((msg = malloc(sizeof(* msg))) == NULL, NULL);
         if_error(recv(fd, &msg->addr, sizeof msg->addr, 0) != sizeof msg->addr, NULL);
         msg->addr = ntohl(msg->addr);
+	printf("Received address\n");
         if_error(recv(fd, &msg->port, sizeof msg->port, 0) != sizeof msg->port, NULL);
         msg->port = ntohl(msg->port);
+	printf("Received port: %d\n", msg->port);
         if_error(recv(fd, &msg->header_size, sizeof msg->header_size, 0) != sizeof msg->header_size, NULL);
+	printf("Received header size: %d\n", msg->header_size);
         if_error((msg->header = calloc(msg->header_size, sizeof &msg->header)) == NULL, NULL);
         if_error(receive_data(fd, msg->header, msg->header_size), NULL);
+	printf("Received header: %s\n", msg->header);
         if_error(recv(fd, &msg->payload_size, sizeof msg->payload_size, 0) != sizeof msg->payload_size, NULL);
+	printf("Received payload size: %d\n", msg->payload_size);
         if_error((msg->payload = malloc(msg->payload_size)) == NULL, NULL);
         if_error(receive_data(fd, msg->payload, msg->payload_size), NULL);
+	printf("Received payload\n");
 
         return msg;
 
@@ -137,14 +149,14 @@ int get_socket(int addr, int port)
         memset(&servaddr, 0, sizeof servaddr);
         servaddr.sin_family = AF_INET;
         servaddr.sin_port = htons(port);
-        servaddr.sin_addr.s_addr = htons(addr);
+        servaddr.sin_addr.s_addr = htonl(addr);
         do {
                 if_error((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1, -1);
                 no_connect = connect(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
                 if (no_connect) {
                         perror(NULL);
-                        if_error(fprintf(stderr, "Attempting reconnect to %d port %d (attempt #%d)\n", addr, port, ++reconnections) < 0,
- -1);
+                        if_error(fprintf(stderr, "Attempting reconnect to %s port %d (attempt #%d)\n",
+					 inet_ntoa(servaddr.sin_addr), port, ++reconnections) < 0, -1);
                         if_error(close(sockfd) == -1, -1);
                         sleep(CONN_SLEEP);
                 }

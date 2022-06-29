@@ -46,22 +46,22 @@ SEXP C_next_message(void)
 	return msg;
 }
 
-SEXP C_send_socket(SEXP fd, SEXP header, SEXP payload)
+SEXP C_send_socket(SEXP fd, SEXP header_length, SEXP header, SEXP payload)
 {
-	int c_fd;
-	int header_size, payload_size;
+	int c_fd, c_header_length;
+	int payload_size;
 	char *c_payload;
 	const char *c_header;
 	SEXP error;
 	
 	c_fd = INTEGER(fd)[0];
-	header_size = LENGTH(header);
+	c_header_length = INTEGER(header_length)[0];
 	c_header = CHAR(STRING_ELT(header, 0));
 	payload_size = LENGTH(payload);
 	c_payload = RAW(payload);
 
 	error = PROTECT(allocVector(INTSXP, 1));
-	INTEGER(error)[0] = send_socket(c_fd, header_size, c_header, payload_size, c_payload);
+	INTEGER(error)[0] = send_socket(c_fd, c_header_length, c_header, payload_size, c_payload);
 
 	UNPROTECT(1);
 	return error;

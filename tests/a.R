@@ -1,0 +1,5 @@
+library(orcv)
+start("localhost", 9797L)
+location()
+other <- as.Location(c(2130706433L, 9898L))
+#send(other, "goodbye", 10:1)

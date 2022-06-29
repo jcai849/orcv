@@ -43,10 +43,11 @@ int start(const char *address, int port, int threads)
 void *listener(void *arg)
 {
 	int listenfd, connfd, *queuedfd;
-	struct sockaddr_in serv_addr;
+	struct sockaddr_in serv_addr, client_addr;
 	socklen_t serv_addrlen;
 	int barrier_error;
 	int yes = 1;
+	socklen_t client_addrlen = sizeof client_addr;
 
 	memset(&serv_addr, 0, sizeof serv_addr);
 	serv_addr.sin_family = AF_INET;
@@ -70,7 +71,8 @@ void *listener(void *arg)
 	arg = NULL;
 
 	while (1) {
-		if_error((connfd = accept(listenfd, NULL, NULL)) == -1, NULL);
+		if_error((connfd = accept(listenfd, (struct sockaddr *) &client_addr, &client_addrlen)) == -1, NULL);
+		printf("Accepted connection from %s\n", inet_ntoa(client_addr.sin_addr));
 		if_error((queuedfd = malloc(sizeof(*queuedfd))) == NULL, NULL);
 		*queuedfd = connfd;
 		if_error(tsqueue_enqueue(&fd_queue, queuedfd), NULL);
@@ -81,10 +83,14 @@ void *receiver(void *arg)
 {
 	int *client_fd;
 	Message *msg;
+	struct sockaddr_in client_name;
+	socklen_t client_namelen = sizeof client_name;
 
 	while (1) {
 		if_error((client_fd = tsqueue_dequeue(&fd_queue)) == NULL, NULL);
 		if_error((msg = receive_message(*client_fd)) == NULL, NULL);
+		getpeername(*client_fd, (struct sockaddr *) &client_name, &client_namelen);
+		printf("Message received from %s\n", inet_ntoa(client_name.sin_addr)); 
 		free(client_fd);
 		if_error(tsqueue_enqueue(&event_queue, msg), NULL);
 	}
