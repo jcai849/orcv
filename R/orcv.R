@@ -1,11 +1,21 @@
 header <- function(x, ...) UseMethod("header", x)
 payload <- function(x, ...) UseMethod("payload", x)
 fd <- function(x, ...) UseMethod("fd", x)
+`fd<-` <- function(x, value) UseMethod("fd<-", x)
 send <- function(x, ...) UseMethod("send", x)
 address <- function(x, ...) UseMethod("address", x)
 port <- function(x, ...) UseMethod("port", x)
 location <- function(x, ...) if (missing(x)) as.Location(.Call(C_location)) else UseMethod("location", x)
-receive <- function(x, ...)  if (missing(x)) as.Message(.Call(C_next_message)) else UseMethod("receive", x)
+receive <- function(x, keep_conn=FALSE...)  {
+	if (missing(x)) {
+		msg <- as.Message(.Call(C_next_message)) 
+		if (!keep_conn) {
+			close(msg)
+			fd(msg) <- as.FD(-1L)
+		}
+		msg
+	} else UseMethod("receive", x)
+}
 
 start <- function(address=NULL, port=0L, threads=getOption("orcv.cores", 4L)) {
 	stopifnot(is.character(address) || is.null(address),
@@ -20,10 +30,15 @@ as.Location <- function(x, ...) {
 	class(x) <- "Location"
 	x
 }
-send.Location <- function(x, header, payload) {
+send.Location <- function(x, header, payload, keep_conn=FALSE, ...) {
 	fd <- as.FD(.Call(C_get_socket, address(x), port(x)))
 	error <- send(fd, header, payload)
-	if (error) error else fd
+	if (error) return(error)
+	if (!keep_conn) {
+		close(fd)
+		fd <- as.FD(-1L)
+	}
+	fd
 }
 address.Location <- function(x, ...) x[[1]]
 port.Location <- function(x, ...) x[[2]]
@@ -33,13 +48,22 @@ as.FD <- function(x, ...) {
 	class(x) <- "FD"
 	x
 }
-send.FD <- function(x, header, payload) {
+send.FD <- function(x, header, payload, keep_conn=FALSE, ...) {
 	stopifnot(is.character(header) && length(header) == 1)
 	serialised_payload <- serialize(payload, NULL)
 	header_length <- nchar(header, type="bytes") + 1L
-	invisible(.Call(C_send_socket, x, header_length, header, serialised_payload))
+	error <- .Call(C_send_socket, x, header_length, header, serialised_payload)
+	if (!keep_conn) close(x)
+	error
 }
-receive.FD <- function(x, ...) as.Message(.Call(C_receive_socket, x))
+receive.FD <- function(x, keep_conn=FALSE...) {
+	msg <- as.Message(.Call(C_receive_socket, x))
+	if (!keep_conn) {
+		close(msg)
+		fd(msg) <- as.FD(-1L)
+	}
+	msg
+}
 close.FD <- function(con, ...) .Call(C_close_socket, con)
 
 as.Message <- function(x, ...) {
@@ -55,4 +79,5 @@ header.Message <- function(x, ...) x$header
 payload.Message <- function(x, ...) x$payload
 location.Message <- function(x, ...) x$loc
 fd.Message <- function(x, ...) x$fd
+`fd<-`.Message <- function(x, value) {x$fd <- value; x}
 close.Message <- function(con, ...) close(fd(con))
