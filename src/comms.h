@@ -33,6 +33,7 @@ in_addr_t address_from_string(const char *);
 Message *receive_message(int fd);
 int receive_data(int, void *, int);
 int get_socket(int addr, int port);
-int send_socket(int, int, const char *, int, unsigned char *);
+int send_socket(int, int, char *, int, unsigned char *);
+int send_message(Message *);
 int send_data(int, const void *, int);
 void delete_message(Message *msg);

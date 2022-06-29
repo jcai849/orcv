@@ -1,6 +1,7 @@
 useDynLib(orcv,
 	C_start,
 	C_next_message,
+	C_receive_socket,
 	C_send_socket,
 	C_get_socket,
 	C_close_socket,
@@ -8,7 +9,7 @@ useDynLib(orcv,
 )
 export(
 	start,
-	next_message,
+	receive,
 	send,
 	location,
 	header,
@@ -26,6 +27,7 @@ S3method(fd, Message)
 S3method(close, Message)
 
 S3method(send, FD)
+S3method(receive, FD)
 S3method(close, FD)
 
 S3method(send, Location)

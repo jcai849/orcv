@@ -5,6 +5,7 @@ send <- function(x, ...) UseMethod("send", x)
 address <- function(x, ...) UseMethod("address", x)
 port <- function(x, ...) UseMethod("port", x)
 location <- function(x, ...) if (missing(x)) as.Location(.Call(C_location)) else UseMethod("location", x)
+receive <- function(x, ...)  if (missing(x)) as.Message(.Call(C_next_message)) else UseMethod("receive", x)
 
 start <- function(address=NULL, port=0L, threads=getOption("orcv.cores", 4L)) {
 	stopifnot(is.character(address) || is.null(address),
@@ -38,20 +39,17 @@ send.FD <- function(x, header, payload) {
 	header_length <- nchar(header, type="bytes") + 1L
 	invisible(.Call(C_send_socket, x, header_length, header, serialised_payload))
 }
+receive.FD <- function(x, ...) as.Message(.Call(C_receive_socket, x))
 close.FD <- function(con, ...) .Call(C_close_socket, con)
 
-next_message <- function() {
-	msg <- .Call(C_next_message)
-	as.Message(msg)
-}
 as.Message <- function(x, ...) {
 	stopifnot(is.list(x), length(x) == 4)
-	names(msg) <- c("fd", "loc", "header", "payload")
-	msg$fd <- as.FD(msg$fd)
-	msg$loc <- as.Location(msg$loc)
-	msg$payload <- unserialize(msg$payload)
-	class(msg) <- "Message"
-	msg
+	names(x) <- c("fd", "loc", "header", "payload")
+	x$fd <- as.FD(x$fd)
+	x$loc <- as.Location(x$loc)
+	x$payload <- unserialize(x$payload)
+	class(x) <- "Message"
+	x
 }
 header.Message <- function(x, ...) x$header
 payload.Message <- function(x, ...) x$payload

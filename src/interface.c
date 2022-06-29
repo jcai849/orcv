@@ -1,7 +1,6 @@
 #include <unistd.h>
 
 #include "interface.h"
-#include "start.h"
 
 SEXP C_start(SEXP address, SEXP port, SEXP threads)
 {
@@ -20,11 +19,35 @@ SEXP C_start(SEXP address, SEXP port, SEXP threads)
 SEXP C_next_message(void)
 {
 	Message *event;
-	SEXP msg, fd, loc, header, payload;
+	SEXP msg;
 
 	event = next_event();
 
-	msg = PROTECT(allocVector(VECSXP, 5));
+	msg = msg_to_sexp(event);
+	delete_message(event);
+
+	return msg;
+}
+
+SEXP C_receive_socket(SEXP fd)
+{
+	int c_fd = INTEGER(fd)[0];
+	Message *event;
+	SEXP msg;
+
+	event = receive_message(c_fd);
+
+	msg = msg_to_sexp(event);
+	delete_message(event);
+
+	return msg;
+}
+
+SEXP msg_to_sexp(Message *event)
+{
+	SEXP msg, fd, loc, header, payload;
+
+	msg = PROTECT(allocVector(VECSXP, 4));
 	fd = PROTECT(allocVector(INTSXP, 1));
 	loc = PROTECT(allocVector(INTSXP, 2));
 	header = PROTECT(allocVector(STRSXP, 1));
@@ -41,7 +64,6 @@ SEXP C_next_message(void)
 	SET_VECTOR_ELT(msg, 2, header);
 	SET_VECTOR_ELT(msg, 3, payload);
 
-	delete_message(event);
 	UNPROTECT(5);
 	return msg;
 }
@@ -51,12 +73,12 @@ SEXP C_send_socket(SEXP fd, SEXP header_length, SEXP header, SEXP payload)
 	int c_fd, c_header_length;
 	int payload_size;
 	char *c_payload;
-	const char *c_header;
+	char *c_header;
 	SEXP error;
 	
 	c_fd = INTEGER(fd)[0];
 	c_header_length = INTEGER(header_length)[0];
-	c_header = CHAR(STRING_ELT(header, 0));
+	c_header = (char *) CHAR(STRING_ELT(header, 0));
 	payload_size = LENGTH(payload);
 	c_payload = RAW(payload);
 
@@ -77,6 +99,7 @@ SEXP C_get_socket(SEXP addr, SEXP port)
 	UNPROTECT(1);
 	return fd;
 }
+
 
 SEXP C_close_socket(SEXP fd)
 {

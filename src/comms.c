@@ -87,6 +87,7 @@ Message *receive_message(int fd)
         Message *msg;
         struct sockaddr_in client_name;
         socklen_t client_namelen = sizeof client_name;
+        struct in_addr addr;
 
 	getpeername(fd, (struct sockaddr *) &client_name, &client_namelen);
 	printf("Receiving message from %s\n", inet_ntoa(client_name.sin_addr));
@@ -95,20 +96,15 @@ Message *receive_message(int fd)
 	msg->fd = fd;
         if_error(recv(fd, &msg->addr, sizeof msg->addr, 0) != sizeof msg->addr, NULL);
         msg->addr = ntohl(msg->addr);
-	printf("Received address\n");
+	addr.s_addr = htonl(msg->addr);
         if_error(recv(fd, &msg->port, sizeof msg->port, 0) != sizeof msg->port, NULL);
-        msg->port = ntohl(msg->port);
-	printf("Received port: %d\n", msg->port);
+        msg->port = ntohs(msg->port);
         if_error(recv(fd, &msg->header_size, sizeof msg->header_size, 0) != sizeof msg->header_size, NULL);
-	printf("Received header size: %d\n", msg->header_size);
         if_error((msg->header = calloc(msg->header_size, sizeof &msg->header)) == NULL, NULL);
         if_error(receive_data(fd, msg->header, msg->header_size), NULL);
-	printf("Received header: %s\n", msg->header);
         if_error(recv(fd, &msg->payload_size, sizeof msg->payload_size, 0) != sizeof msg->payload_size, NULL);
-	printf("Received payload size: %d\n", msg->payload_size);
         if_error((msg->payload = malloc(msg->payload_size)) == NULL, NULL);
         if_error(receive_data(fd, msg->payload, msg->payload_size), NULL);
-	printf("Received payload\n");
 
         return msg;
 
@@ -165,18 +161,34 @@ int get_socket(int addr, int port)
         return sockfd;
 }
 
-int send_socket(int sockfd, int header_size, const char *header, int payload_size, unsigned char *payload)
+int send_socket(int sockfd, int header_size, char *header, int payload_size, unsigned char *payload)
 {
 	int addr, port;
+	Message msg;
+	
+	msg.fd = sockfd;
+	msg.addr = htonl(get_address());
+	msg.port = htons(get_port());
+	msg.header_size = header_size;
+	msg.header = header;
+	msg.payload_size = payload_size;
+	msg.payload = payload;
 
-	addr = htonl(self_address);
-	port = htons(self_port);
-        if_error(send(sockfd, &addr, sizeof addr, 0) != sizeof addr, -1);
-        if_error(send(sockfd, &port, sizeof port, 0) != sizeof port, -1);
-        if_error(send(sockfd, &header_size, sizeof header_size, 0) != sizeof header_size, -1);
-        if_error(send_data(sockfd, header, header_size) == -1, -1);
-        if_error(send(sockfd, &payload_size, sizeof payload_size, 0) != sizeof payload_size, -1);
-        if_error(send_data(sockfd, payload, payload_size) == -1, -1);
+	return send_message(&msg);
+}
+
+int send_message(Message *msg)
+{
+	int fd = msg->fd;
+	struct in_addr addr;
+
+	addr.s_addr = msg->addr;
+        if_error(send(fd, &msg->addr, sizeof msg->addr, 0) != sizeof msg->addr, -1);
+        if_error(send(fd, &msg->port, sizeof msg->port, 0) != sizeof msg->port, -1);
+        if_error(send(fd, &msg->header_size, sizeof msg->header_size, 0) != sizeof msg->header_size, -1);
+        if_error(send_data(fd, msg->header, msg->header_size) == -1, -1);
+        if_error(send(fd, &msg->payload_size, sizeof msg->payload_size, 0) != sizeof msg->payload_size, -1);
+        if_error(send_data(fd, msg->payload, msg->payload_size) == -1, -1);
 
         return 0;
 }
