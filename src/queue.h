@@ -8,8 +8,8 @@ typedef struct Queue {
     Node *tail;
 } Queue;
 
-int queue_init(Queue *);
-int queue_empty(Queue);
-void *queue_dequeue(Queue *);
-int queue_enqueue(Queue *, void *);
-int queue_destroy(Queue *);
+int queue_init(Queue *queue);
+int queue_empty(Queue queue);
+void *queue_dequeue(Queue *queue);
+int queue_enqueue(Queue *queue, void *pdata);
+int queue_destroy(Queue *queue);

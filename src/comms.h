@@ -26,14 +26,14 @@ typedef struct Message {
 
 in_port_t get_port(void);
 in_addr_t get_address(void);
-void set_port(in_port_t);
-void set_address(in_addr_t);
+void set_port(in_port_t port);
+void set_address(in_addr_t addr);
 in_addr_t first_avail_iface(void);
-in_addr_t address_from_string(const char *);
+in_addr_t address_from_string(const char *address);
 Message *receive_message(int fd);
-int receive_data(int, void *, int);
+int receive_data(int sockfd, void *data, int len);
 int get_socket(int addr, int port);
-int send_socket(int, int, char *, int, unsigned char *);
-int send_message(Message *);
-int send_data(int, const void *, int);
+int send_socket(int sockfd, int header_size, char *header, int payload_size, unsigned char *payload);
+int send_message(Message *msg);
+int send_data(int sockfd, const void *data, int len);
 void delete_message(Message *msg);

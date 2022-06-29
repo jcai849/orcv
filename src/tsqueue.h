@@ -7,7 +7,7 @@ typedef struct TSQueue {
     pthread_cond_t non_empty;
 } TSQueue;
 
-int tsqueue_init(TSQueue *);
-void *tsqueue_dequeue(TSQueue *);
-int tsqueue_enqueue(TSQueue *, void *);
-int tsqueue_destroy(TSQueue *);
+int tsqueue_init(TSQueue *queue);
+void *tsqueue_dequeue(TSQueue *queue);
+int tsqueue_enqueue(TSQueue *queue, void *pdata);
+int tsqueue_destroy(TSQueue *queue);
