@@ -21,3 +21,5 @@ other <- as.Location(c(INADDR_LOOPBACK, 9898L))
 # 8) send to fd b before other receive, keep_conn b
 # 9) send to fd b when closed by other
 #10) send to fd a when closed by self
+
+## X 100
