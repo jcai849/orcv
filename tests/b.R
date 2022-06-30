@@ -7,6 +7,7 @@ other <- as.Location(c(INADDR_LOOPBACK, 9797L))
 ## INIT
 
 # 1) receive loc from queue
+#  i) header, payload, location fd of message
 # 2) send self_loc to loc
 
 ## X 1
