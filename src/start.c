@@ -20,7 +20,7 @@ int start(const char *address, int port, int threads)
 	in_addr_t addr;
 
 	set_port(port);
-	addr = address ? address_from_string(address) : first_avail_iface();
+	addr = address ? address_from_string(address, port) : first_avail_iface();
 	if (addr == -1) return -1;
 	set_address(addr);
 	if_error(tsqueue_init(&fd_queue), -1);

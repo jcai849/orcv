@@ -29,7 +29,7 @@ in_addr_t get_address(void);
 void set_port(in_port_t port);
 void set_address(in_addr_t addr);
 in_addr_t first_avail_iface(void);
-in_addr_t address_from_string(const char *address);
+in_addr_t address_from_string(const char *address, int port);
 Message *receive_message(int fd);
 int receive_data(int sockfd, void *data, int len);
 int get_socket(int addr, int port);

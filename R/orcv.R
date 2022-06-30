@@ -79,5 +79,11 @@ header.Message <- function(x, ...) x$header
 payload.Message <- function(x, ...) x$payload
 location.Message <- function(x, ...) x$loc
 fd.Message <- function(x, ...) x$fd
-`fd<-`.Message <- function(x, value) {x$fd <- value; x}
+`fd<-.Message` <- function(x, value) {x$fd <- value; x}
 close.Message <- function(con, ...) close(fd(con))
+
+send.character <- function(x, port, header, payload, keep_conn=FALSE, ...) {
+	stopifnot(is.integer(port))
+	loc <- as.Location(.Call(C_loc_from_string, x, port))
+	send(loc, header, payload, keep_conn=FALSE, ...)
+}

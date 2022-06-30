@@ -5,7 +5,8 @@ useDynLib(orcv,
 	C_send_socket,
 	C_get_socket,
 	C_close_socket,
-	C_location
+	C_location,
+	C_loc_from_string
 )
 export(
 	start,
@@ -33,3 +34,5 @@ S3method(close, FD)
 S3method(send, Location)
 S3method(address, Location)
 S3method(port, Location)
+
+S3method(send, character)

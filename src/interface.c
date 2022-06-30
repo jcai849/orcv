@@ -123,3 +123,15 @@ SEXP C_location(void)
 	UNPROTECT(1);
 	return loc;
 }
+
+SEXP C_loc_from_string(SEXP addr, SEXP port)
+{
+	SEXP loc;
+	
+	loc = PROTECT(allocVector(INTSXP, 2));
+	INTEGER(loc)[0] = ntohl(address_from_string(CHAR(STRING_ELT(addr, 0)), INTEGER(port)[0]));
+	INTEGER(loc)[1] = INTEGER(port)[0];
+	
+	UNPROTECT(1);
+	return loc;
+}

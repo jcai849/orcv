@@ -55,7 +55,7 @@ in_addr_t first_avail_iface(void)
 	return ntohl(addr);
 }
 
-in_addr_t address_from_string(const char *address)
+in_addr_t address_from_string(const char *address, int port)
 {
 	struct addrinfo hints, *result;
 	char service[16+1];
@@ -68,7 +68,7 @@ in_addr_t address_from_string(const char *address)
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_protocol = IPPROTO_TCP;
 
-	snprintf(service, 16+1, "%d", get_port());
+	snprintf(service, 16+1, "%d", port);
 
 	error = getaddrinfo(address, service, &hints, &result);
 	if (error) {
