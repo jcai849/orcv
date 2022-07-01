@@ -50,6 +50,7 @@ as.FD <- function(x, ...) {
 }
 send.FD <- function(x, header, payload, keep_conn=FALSE, ...) {
 	stopifnot(is.character(header) && length(header) == 1)
+	force(keep_conn)
 	serialised_payload <- serialize(payload, NULL)
 	header_length <- nchar(header, type="bytes") + 1L
 	error <- .Call(C_send_socket, x, header_length, header, serialised_payload)
@@ -64,7 +65,7 @@ receive.FD <- function(x, keep_conn=FALSE...) {
 	}
 	msg
 }
-close.FD <- function(con, ...) .Call(C_close_socket, con)
+close.FD <- function(con, ...) {force(con); .Call(C_close_socket, con)}
 
 as.Message <- function(x, ...) {
 	stopifnot(is.list(x), length(x) == 4)
