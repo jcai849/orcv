@@ -1,2 +1,2 @@
-PKG_CFLAGS = -g
+PKG_CFLAGS = -g -Wall
 PKG_LIBS = -lpthread

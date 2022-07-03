@@ -1,356 +1,216 @@
-#include <sys/types.h>
+#include <stdlib.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
-#include <netdb.h>
-#include <stdlib.h>
+#include <errno.h>
 #include <string.h>
 #include <unistd.h>
-#include <errno.h>
-#include <stdio.h>
-
+#include <ifaddrs.h>
+#include <sys/types.h>
+#include <netdb.h>
 #include "comms.h"
 
-#define MAX_RECV_SIZE (1024*1024*128)
-#define MAX_SEND_SIZE (1024*1024*128)
-#define BACKLOG 10
-#define CONN_SLEEP 1
+in_addr_t self_address; /* both stored as  */
+in_port_t self_port;    /* host byte order */
 
-struct ListenerArg {
-    int port;
-    TSQueue *ts_queue;
-};
-
-struct ReceiverArg {
-    int (*filter)(struct Message *);
-    TSQueue *ts_queue;
-    EventQueue *event_queue;
-};
-
-char *itoa(int num) // Auto-allocates; Must free returned val
+in_port_t get_port(void)
 {
-    int length;
-    char *string_form;
-
-    if ((length = snprintf(NULL, 0, "%d", num)) < 0) {
-        perror(NULL);
-        return NULL;
-    }
-    if ((string_form = malloc(length + 1)) == NULL) {
-        perror(NULL);
-        return NULL;
-    }
-    if ((snprintf(string_form, length + 1, "%d", num)) < 0) {
-        perror(NULL);
-        return NULL;
-    }
-    return string_form;
+	return self_port;
 }
 
-
-Message *receive(int fd)
+in_addr_t get_address(void)
 {
-    unsigned int len = 0, i = 0;
-    unsigned char *payload;
-    int n, need;
-    struct Message *msg;
-    struct Data *data;
+	return self_address;
+}
 
-    n = read(fd, &len, sizeof(len));
-    if (n != sizeof(len) || len == 0) {
-      fprintf(stderr, "Header read error on descriptor %d", fd);
-      close(fd);
-      fd = -1;
-      return NULL;
-    } else {
-        if ((payload = malloc(len)) == NULL) {
-            perror(NULL);
-            return NULL;
-        }
-        while (i < len) {
-            need = (len - i > MAX_RECV_SIZE) ? MAX_RECV_SIZE : (len - i);
-            n = read(fd, payload + i, need);
-            if (n < 0) {
-                if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                    continue;
+void set_port(in_port_t port)
+{
+	self_port = port;
+}
+
+void set_address(in_addr_t addr)
+{
+	self_address = addr;
+}
+
+in_addr_t first_avail_iface(void)
+{
+        struct ifaddrs *ifap, *ifa;
+        in_addr_t addr;
+
+	getifaddrs(&ifap);
+        for (ifa = ifap; ifa; ifa = ifa->ifa_next) {
+                if (ifa->ifa_addr &&
+                    ifa->ifa_addr->sa_family == AF_INET) /* then we can cast to sockaddr_in: */
+                        if(((struct sockaddr_in *) ifa->ifa_addr)->sin_addr.s_addr != htonl(INADDR_LOOPBACK) &&
+                           ((struct sockaddr_in *) ifa->ifa_addr)->sin_addr.s_addr != htonl(INADDR_ANY)) {
+                                break;
                 }
-                close(fd);
-                fd = -1;
-                fprintf(stderr, "Read error on descriptor %d: %s", fd, strerror(errno));
-                return NULL;
-            } else if (n == 0) {
-                close(fd);
-                fd = -1;
-                fprintf(stderr, "Connection closed on descriptor %d before all data was received", fd);
-                return NULL;
-            }
-            i += n;
+                if (!ifa->ifa_next) {
+                        perror("No interface found\n");
+                        return -1;
+                }
         }
-    }
-    if ((data = malloc(sizeof(*data))) == NULL) {
-        perror(NULL);
-        return NULL;
-    }
-    data->data = payload;
-    data->size = len;
-    if ((msg = malloc(sizeof(*msg))) == NULL) {
-        perror(NULL);
-        return NULL;
-    }
-    msg->data = data;
-    msg->connection = fd;
-
-    return msg;
-};
-
-int send_message(struct Message *msg) {
-    int i = 0, need, n;
-    int len = msg->data->size;
-    int sockfd = msg->connection;
-
-    if (write(sockfd, &len, sizeof(len)) != sizeof(len)) {
-        close(sockfd);
-        msg->connection = -1;
-        perror(NULL);
-        fprintf(stderr, "Failed to write header\n");
-        return -1;
-    }
-    while (i < len) {
-        need = (len - i > MAX_SEND_SIZE) ? MAX_SEND_SIZE : (len - i);
-        n = write(sockfd, msg->data->data + i, need);
-        if (n < 1) {
-          close(sockfd);
-          msg->connection = -1;
-          fprintf(stderr, "Failed to write (n=%d of %d) %s\n", n, need, (n == -1 && errno) ? strerror(errno) : "");
-          perror(NULL);
-          return -1;
-        }
-        i += n;
-    }
-    return 0;
+        addr = ((struct sockaddr_in *) ifa->ifa_addr)->sin_addr.s_addr;
+        freeifaddrs(ifap);
+	return ntohl(addr);
 }
 
-int send_data(const char *addr, int port, Data *data)
+in_addr_t address_from_string(const char *address, int port)
 {
-    struct addrinfo hints, *res;
-    int addr_error;
-    int sockfd;
-    int no_connect, reconnections = 0;
-    char *string_port;
-    Message msg;
+	struct addrinfo hints, *result;
+	char service[16+1];
+	in_addr_t addr;
+	int error;
 
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_NUMERICSERV;
-    if ((string_port = itoa(port)) == NULL) {
-        fprintf(stderr, "unable to convert port to string\n");
-        return -1;
-    };
-    addr_error = getaddrinfo(addr, string_port, &hints, &res);
-    if  (addr_error) {
-        fprintf(stderr, "%s\n", gai_strerror(addr_error));
-        return -1;
-    }
-    free(string_port);
-	do {
-		sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-		if (sockfd == -1) {
-			perror(NULL);
-			return -1;
-		}
-		no_connect = connect(sockfd, res->ai_addr, res->ai_addrlen);
-		if (no_connect) {
-			perror(NULL);
-			fprintf(stderr, "Attempting reconnect to %s port %d (attempt #%d)\n", addr, port, ++reconnections);
-			close(sockfd);
-			sleep(CONN_SLEEP);
-		}
-	} while (no_connect);
+	memset(&hints, 0, sizeof hints);
+	hints.ai_flags = AI_PASSIVE;
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_protocol = IPPROTO_TCP;
 
-    msg.connection = sockfd;
-    msg.data = data;
-    if (send_message(&msg) != 0) {
-        return -1;
-    }
+	snprintf(service, 16+1, "%d", port);
 
-    return sockfd;
-}
-
-void *get_in_addr(struct sockaddr *sa)
-{
-    if (sa->sa_family == AF_INET) {
-        return &(((struct sockaddr_in*)sa)->sin_addr);
-    }
-
-    return &(((struct sockaddr_in6*)sa)->sin6_addr);
-}
-
-void *listener(void *arg)
-{
-    struct sockaddr_storage client_addr;
-    socklen_t addr_size;
-    struct addrinfo hints, *res, *p;
-    int addr_error;
-    int sockfd, client_fd, *queued_fd;
-    char *servname;
-    // char s[INET6_ADDRSTRLEN];
-    int yes = 1;
-
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE;
-
-    if ((servname = itoa(((struct ListenerArg *) arg)->port)) == NULL) {
-        fprintf(stderr, "unable to convert port to string\n");
-        return NULL;
-    }
-    if ((addr_error = getaddrinfo(NULL, servname, &hints, &res)) != 0) {
-        fprintf(stderr, "%s\n", gai_strerror(addr_error));
-        return NULL;
-    }
-    free(servname);
-    if (addr_error) {
-        fprintf(stderr, "%s\n", gai_strerror(addr_error));
-    }
-    for (p = res; p != NULL; p = p->ai_next) {
-        if ((sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1) {
-            perror(NULL);
-            continue;
-        }
-        if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
-            perror(NULL);
-            return NULL;
-        }
-        if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-            close(sockfd);
-            perror(NULL);
-            return NULL;
-        }
-        break;
-    }
-    freeaddrinfo(res);
-
-    if (p == NULL) {
-        fprintf(stderr, "bind failure\n");
-        return NULL;
-    }
-    if (listen(sockfd, BACKLOG) == -1) {
-        perror(NULL);
-        return NULL;
-    }
-
-
-    while (1) {
-        addr_size = sizeof client_addr;
-        client_fd = accept(sockfd, (struct sockaddr *) &client_addr, &addr_size);
-        if (client_fd == -1) {
-            perror(NULL);
-            continue;
-        }
-        // inet_ntop(client_addr.ss_family, get_in_addr((struct sockaddr *) &client_addr), s, sizeof(s));
-        // printf("got connection from %s\n", s);
-        if ((queued_fd = malloc(sizeof(*queued_fd))) == NULL) {
-            perror(NULL);
-            return NULL;
-        };
-        *queued_fd = client_fd;
-        if (tsqueue_enqueue(((struct ListenerArg *) arg)->ts_queue, queued_fd) != 0) {
-            fprintf(stderr, "enqueue issue\n");
-            return NULL;
-        }
-    }
-}
-
-
-void *receiver(void *arg)
-{
-    int client_fd, *pclient_fd;
-    int filter_error;
-    struct Message *msg;
-
-    while (1) {
-        if ((pclient_fd = tsqueue_dequeue(((struct ReceiverArg *) arg)->ts_queue)) == NULL) {
-            fprintf(stderr, "dequeueing NULL\n");
-            return NULL;
-        }
-        client_fd = *pclient_fd;
-        if ((msg = receive(client_fd)) == NULL) {
-            return NULL;
-        }
-	if (((struct ReceiverArg *) arg)->filter != NULL) {
-		filter_error = (*((struct ReceiverArg *) arg)->filter)(msg);
-		if (filter_error) {
-			fprintf(stderr, "filter error");
-			return NULL;
-		}
+	error = getaddrinfo(address, service, &hints, &result);
+	if (error) {
+		perror(gai_strerror(error));
+		freeaddrinfo(result);
+		return -1;
 	}
-        free(pclient_fd);
-        if (event_queue_enqueue(((struct ReceiverArg *) arg)->event_queue, msg) != 0) {
-            return NULL;
-        }
-    }
+	addr = ((struct sockaddr_in *) result->ai_addr)->sin_addr.s_addr;
+	freeaddrinfo(result);
+
+	return ntohl(addr);
 }
 
-Inputs *start(int port, int (*filter)(struct Message *), int threads)
+Message *receive_message(int fd)
 {
-    struct ListenerArg *listener_arg;
-    struct ReceiverArg *receiver_arg;
-    TSQueue *ts_queue;
-    EventQueue *event_queue;
-    pthread_t thread;
-    int i;
-    Inputs *inputs;
+        Message *msg;
+        struct sockaddr_in client_name;
+        socklen_t client_namelen = sizeof client_name;
+        struct in_addr addr;
 
-    if ((ts_queue = malloc(sizeof(*ts_queue))) == NULL) {
-        perror(NULL);
-        return NULL;
-    }
-    if (tsqueue_init(ts_queue) != 0) {
-        return NULL;
-    }
-    if ((event_queue = malloc(sizeof(*event_queue))) == NULL) {
-        perror(NULL);
-    }
-    if (event_queue_init(event_queue) != 0) {
-        return NULL;
-    }
+	getpeername(fd, (struct sockaddr *) &client_name, &client_namelen);
+	printf("Receiving message from %s\n", inet_ntoa(client_name.sin_addr));
 
-    if ((listener_arg = malloc(sizeof(*listener_arg))) == NULL) {
-        perror(NULL);
-        return NULL;
-    }
-    listener_arg->port = port;
-    listener_arg->ts_queue = ts_queue;
-    if ((receiver_arg = malloc(sizeof(*receiver_arg))) == NULL) {
-        perror(NULL);
-        return NULL;
-    }
-    receiver_arg->ts_queue = ts_queue;
-    receiver_arg->event_queue = event_queue;
-    receiver_arg->filter = filter;
+        if_error((msg = malloc(sizeof(*msg))) == NULL, NULL);
+	msg->fd = fd;
+        if_error(recv(fd, &msg->addr, sizeof msg->addr, 0) != sizeof msg->addr, NULL);
+        msg->addr = ntohl(msg->addr);
+	addr.s_addr = htonl(msg->addr);
+        if_error(recv(fd, &msg->port, sizeof msg->port, 0) != sizeof msg->port, NULL);
+        msg->port = ntohs(msg->port);
+        if_error(recv(fd, &msg->header_size, sizeof msg->header_size, 0) != sizeof msg->header_size, NULL);
+        if_error((msg->header = calloc(msg->header_size, sizeof &msg->header)) == NULL, NULL);
+        if_error(receive_data(fd, msg->header, msg->header_size), NULL);
+        if_error(recv(fd, &msg->payload_size, sizeof msg->payload_size, 0) != sizeof msg->payload_size, NULL);
+        if_error((msg->payload = malloc(msg->payload_size)) == NULL, NULL);
+        if_error(receive_data(fd, msg->payload, msg->payload_size), NULL);
 
-    if (pthread_create(&thread, NULL, &listener, listener_arg) != 0) {
-        perror(NULL);
-        return NULL;
-    }
-    for (i = 0; i < threads; i++) {
-        if (pthread_create(&thread, NULL, &receiver, receiver_arg) != 0) {
-            perror(NULL);
-            return NULL;
+        return msg;
+
+}
+
+int receive_data(int sockfd, void *data, int len)
+{
+        int i = 0, n, need;
+
+        while (i < len) {
+                need = (len - i > MAX_RECV_SIZE) ? MAX_RECV_SIZE : (len - i);
+                n = recv(sockfd, data + i, need, 0);
+                if (n < 0) {
+                        if (errno == EAGAIN || errno == EWOULDBLOCK) continue;
+                        fprintf(stderr, "Read error on descriptor %d: %s", sockfd, strerror(errno));
+                        if_error(close(sockfd) == -1, -1);
+                        sockfd = -1;
+                        return -1;
+                } else if (n == 0) {
+                        fprintf(stderr, "Connection closed on descriptor %d before all data was received", sockfd);
+                        if_error(close(sockfd) == -1, -1);
+                        sockfd = -1;
+                        return -1;
+                }
+                i += n;
         }
-    }
+        return 0;
+}
 
-    if ((inputs = malloc(sizeof(*inputs))) == NULL) {
-        perror(NULL);
-        return NULL;
-    };
-    if (inputs_init(inputs) != 0) {
-        return NULL;
-    }
-    if (inputs_insert_queue(inputs, event_queue) != 0) {
-        return NULL;
-    }
+int get_socket(int addr, int port)
+{
+        int sockfd;
+        int no_connect, reconnections = 0;
+        struct sockaddr_in servaddr;
 
-    return inputs;
+        memset(&servaddr, 0, sizeof servaddr);
+        servaddr.sin_family = AF_INET;
+        servaddr.sin_port = htons(port);
+        servaddr.sin_addr.s_addr = htonl(addr);
+        do {
+                if_error((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1, -1);
+                no_connect = connect(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
+                if (no_connect) {
+                        perror(NULL);
+                        if_error(fprintf(stderr, "Attempting reconnect to %s port %d (attempt #%d)\n",
+					 inet_ntoa(servaddr.sin_addr), port, ++reconnections) < 0, -1);
+                        if_error(close(sockfd) == -1, -1);
+                        sleep(CONN_SLEEP);
+                }
+        } while (no_connect);
+
+        return sockfd;
+}
+
+int send_socket(int sockfd, int header_size, char *header, int payload_size, unsigned char *payload)
+{
+	Message msg;
+	
+	msg.fd = sockfd;
+	msg.addr = htonl(get_address());
+	msg.port = htons(get_port());
+	msg.header_size = header_size;
+	msg.header = header;
+	msg.payload_size = payload_size;
+	msg.payload = payload;
+
+	return send_message(&msg);
+}
+
+int send_message(Message *msg)
+{
+	int fd = msg->fd;
+	struct in_addr addr;
+
+	addr.s_addr = msg->addr;
+        if_error(send(fd, &msg->addr, sizeof msg->addr, 0) != sizeof msg->addr, -1);
+        if_error(send(fd, &msg->port, sizeof msg->port, 0) != sizeof msg->port, -1);
+        if_error(send(fd, &msg->header_size, sizeof msg->header_size, 0) != sizeof msg->header_size, -1);
+        if_error(send_data(fd, msg->header, msg->header_size) == -1, -1);
+        if_error(send(fd, &msg->payload_size, sizeof msg->payload_size, 0) != sizeof msg->payload_size, -1);
+        if_error(send_data(fd, msg->payload, msg->payload_size) == -1, -1);
+
+        return 0;
+}
+
+int send_data(int sockfd, const void *data, int len)
+{
+        int i = 0, need, n;
+
+        while (i < len) {
+                need = (len - i > MAX_SEND_SIZE) ? MAX_SEND_SIZE : (len - i);
+                n = send(sockfd, data + i, need, 0);
+                if (n < 1) {
+                        perror(NULL);
+                        if_error(close(sockfd) == -1, -1);
+                        if_error(fprintf(stderr, "Failed to write (n=%d of %d) %s\n", n, need, (n == -1 && errno) ? strerror(errno) : ""
+) < 0, -1);
+                        return -1;
+                }
+                i += n;
+        }
+        return 0;
+}
+
+void delete_message(Message *msg) {
+        free(msg->header);
+        free(msg->payload);
+        free(msg);
 }

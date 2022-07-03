@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "thread-safe-queue.h"
+#include "tsqueue.h"
 
 int tsqueue_init(TSQueue *queue)
 {
