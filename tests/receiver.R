@@ -31,7 +31,7 @@ receive()
 Sys.sleep(1)
 fd_b <- fd(receive(keep_conn=T))
 # 4) receive from queue after other send
-sleep(1)
+Sys.sleep(1)
 receive()
 # 5) receive from fd a before other receive, keep_conn a
 fd_a2 <- fd(receive(fd_a, keep_conn=T))
@@ -41,12 +41,18 @@ receive(fd_a, keep_conn=T)
 # 7) receive from fd b after other send, keep_conn b
 Sys.sleep(1)
 receive(fd_b, keep_conn=T)
-# 8) receive from fd b after other send
-Sys.sleep(1)
-receive(fd_b)
-# 9) receive from fd a when closed by other
-receive(fd_a)
-#10) receive from fd b when closed by self
-receive(fd_b)
+# 8) close fd b
+close(fd_b)
+# 9) receive from fd a after closed by other
+tryCatch(receive(fd_a), error=identity)
+#10) receive from fd b after closed by self
+tryCatch(receive(fd_b), error=identity)
 
 ## X 100
+# 1) receive a bunch after other send
+for (i in 1:100) receive()
+# 2) receive one to keep_conn c
+fd_c <- fd(receive(keep_conn=T))
+print(fd_c)
+# 3) receive a bunch from fd c after other send
+for (i in 1:100) receive(fd_c, keep_conn=T)

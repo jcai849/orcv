@@ -139,8 +139,6 @@ int get_socket(int addr, int port)
         int sockfd;
         int no_connect, reconnections = 0;
         struct sockaddr_in servaddr;
-	uint32_t n_addr;
-	uint16_t n_port;
 
         memset(&servaddr, 0, sizeof servaddr);
         servaddr.sin_family = AF_INET;
@@ -163,7 +161,6 @@ int get_socket(int addr, int port)
 
 int send_socket(int sockfd, int header_size, char *header, int payload_size, unsigned char *payload)
 {
-	int addr, port;
 	Message msg;
 	
 	msg.fd = sockfd;

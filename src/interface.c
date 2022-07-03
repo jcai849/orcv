@@ -22,6 +22,7 @@ SEXP C_next_message(void)
 	SEXP msg;
 
 	event = next_event();
+	if (!event) return R_NilValue;
 
 	msg = msg_to_sexp(event);
 	delete_message(event);
@@ -36,6 +37,7 @@ SEXP C_receive_socket(SEXP fd)
 	SEXP msg;
 
 	event = receive_message(c_fd);
+	if (!event) return R_NilValue;
 
 	msg = msg_to_sexp(event);
 	delete_message(event);
@@ -68,12 +70,14 @@ SEXP msg_to_sexp(Message *event)
 	return msg;
 }
 
+/* returns -1 if error, fd otherwise */
 SEXP C_send_socket(SEXP fd, SEXP header_length, SEXP header, SEXP payload)
 {
 	int c_fd, c_header_length;
 	int payload_size;
 	char *c_payload;
 	char *c_header;
+	int c_error;
 	SEXP error;
 	
 	c_fd = INTEGER(fd)[0];
@@ -82,11 +86,12 @@ SEXP C_send_socket(SEXP fd, SEXP header_length, SEXP header, SEXP payload)
 	payload_size = LENGTH(payload);
 	c_payload = RAW(payload);
 
+	c_error = send_socket(c_fd, c_header_length, c_header, payload_size, c_payload);
 	error = PROTECT(allocVector(INTSXP, 1));
-	INTEGER(error)[0] = send_socket(c_fd, c_header_length, c_header, payload_size, c_payload);
+	INTEGER(error)[0] = c_error;
 
 	UNPROTECT(1);
-	return error;
+	return c_error ? error : fd;
 }
 
 SEXP C_get_socket(SEXP addr, SEXP port)
@@ -129,7 +134,7 @@ SEXP C_loc_from_string(SEXP addr, SEXP port)
 	SEXP loc;
 	
 	loc = PROTECT(allocVector(INTSXP, 2));
-	INTEGER(loc)[0] = ntohl(address_from_string(CHAR(STRING_ELT(addr, 0)), INTEGER(port)[0]));
+	INTEGER(loc)[0] = address_from_string(CHAR(STRING_ELT(addr, 0)), INTEGER(port)[0]);
 	INTEGER(loc)[1] = INTEGER(port)[0];
 	
 	UNPROTECT(1);

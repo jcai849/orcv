@@ -6,14 +6,15 @@ send <- function(x, ...) UseMethod("send", x)
 address <- function(x, ...) UseMethod("address", x)
 port <- function(x, ...) UseMethod("port", x)
 location <- function(x, ...) if (missing(x)) as.Location(.Call(C_location)) else UseMethod("location", x)
-receive <- function(x, keep_conn=FALSE...)  {
+receive <- function(x, keep_conn=FALSE, ...)  {
 	if (missing(x)) {
 		msg <- as.Message(.Call(C_next_message)) 
+		if (is.null(msg)) stop("receive error")
 		if (!keep_conn) {
 			close(msg)
 			fd(msg) <- as.FD(-1L)
 		}
-		msg
+		invisible(msg)
 	} else UseMethod("receive", x)
 }
 
@@ -32,13 +33,8 @@ as.Location <- function(x, ...) {
 }
 send.Location <- function(x, header, payload, keep_conn=FALSE, ...) {
 	fd <- as.FD(.Call(C_get_socket, address(x), port(x)))
-	error <- send(fd, header, payload)
-	if (error) return(error)
-	if (!keep_conn) {
-		close(fd)
-		fd <- as.FD(-1L)
-	}
-	fd
+	send(fd, header, payload, keep_conn, ...)
+	invisible(fd)
 }
 address.Location <- function(x, ...) x[[1]]
 port.Location <- function(x, ...) x[[2]]
@@ -53,17 +49,19 @@ send.FD <- function(x, header, payload, keep_conn=FALSE, ...) {
 	force(keep_conn)
 	serialised_payload <- serialize(payload, NULL)
 	header_length <- nchar(header, type="bytes") + 1L
-	error <- .Call(C_send_socket, x, header_length, header, serialised_payload)
+	fd <- .Call(C_send_socket, x, header_length, header, serialised_payload)
+	if (fd == -1) stop("send error")
 	if (!keep_conn) close(x)
-	error
+	invisible(fd)
 }
-receive.FD <- function(x, keep_conn=FALSE...) {
+receive.FD <- function(x, keep_conn=FALSE, ...) {
 	msg <- as.Message(.Call(C_receive_socket, x))
+	if (is.null(msg)) stop("receive error")
 	if (!keep_conn) {
 		close(msg)
 		fd(msg) <- as.FD(-1L)
 	}
-	msg
+	invisible(msg)
 }
 close.FD <- function(con, ...) {force(con); .Call(C_close_socket, con)}
 
@@ -86,5 +84,5 @@ close.Message <- function(con, ...) close(fd(con))
 send.character <- function(x, port, header, payload, keep_conn=FALSE, ...) {
 	stopifnot(is.integer(port))
 	loc <- as.Location(.Call(C_loc_from_string, x, port))
-	send(loc, header, payload, keep_conn=FALSE, ...)
+	send(loc, header, payload, keep_conn, ...)
 }
