@@ -26,6 +26,7 @@ S3method(payload, Message)
 S3method(location, Message)
 S3method(fd, Message)
 S3method(close, Message)
+S3method(send, Message)
 
 S3method(send, FD)
 S3method(receive, FD)
@@ -36,3 +37,5 @@ S3method(address, Location)
 S3method(port, Location)
 
 S3method(send, character)
+S3method(as.Location, character)
+S3method(as.Location, integer)

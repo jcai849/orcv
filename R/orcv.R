@@ -6,6 +6,7 @@ send <- function(x, ...) UseMethod("send", x)
 address <- function(x, ...) UseMethod("address", x)
 port <- function(x, ...) UseMethod("port", x)
 location <- function(x, ...) if (missing(x)) as.Location(.Call(C_location)) else UseMethod("location", x)
+as.Location <- function(x, ...) UseMethod("as.Location", x)
 receive <- function(x, keep_conn=FALSE, ...)  {
 	if (missing(x)) {
 		msg <- as.Message(.Call(C_next_message)) 
@@ -25,13 +26,14 @@ start <- function(address=NULL, port=0L, threads=getOption("orcv.cores", 4L)) {
 	invisible(.Call(C_start, address, port, threads))
 }
 
-as.Location <- function(x, ...) {
-	stopifnot(is.integer(x), length(x) == 2L)
+as.Location.integer <- function(x, port, ...) {
+	if (!missing(port) && length(x) == 1) x <- c(x, port)
+	stopifnot(length(x) == 2L)
 	names(x) <- c("address", "port")
 	class(x) <- "Location"
 	x
 }
-send.Location <- function(x, header, payload, keep_conn=FALSE, ...) {
+send.Location <- function(x, header, payload=NULL, keep_conn=FALSE, ...) {
 	fd <- as.FD(.Call(C_get_socket, address(x), port(x)))
 	send(fd, header, payload, keep_conn, ...)
 	invisible(fd)
@@ -44,7 +46,7 @@ as.FD <- function(x, ...) {
 	class(x) <- "FD"
 	x
 }
-send.FD <- function(x, header, payload, keep_conn=FALSE, ...) {
+send.FD <- function(x, header, payload=NULL, keep_conn=FALSE, ...) {
 	stopifnot(is.character(header) && length(header) == 1)
 	force(keep_conn)
 	serialised_payload <- serialize(payload, NULL)
@@ -80,9 +82,14 @@ location.Message <- function(x, ...) x$loc
 fd.Message <- function(x, ...) x$fd
 `fd<-.Message` <- function(x, value) {x$fd <- value; x}
 close.Message <- function(con, ...) close(fd(con))
+send.Message <- function(x, header, payload=NULL, keep_conn=FALSE, ...) send(fd(x), header, payload, keep_conn, ...)
 
-send.character <- function(x, port, header, payload, keep_conn=FALSE, ...) {
+send.character <- function(x, port, header, payload=NULL, keep_conn=FALSE, ...) {
 	stopifnot(is.integer(port))
-	loc <- as.Location(.Call(C_loc_from_string, x, port))
+	loc <- as.Location(x, port)
 	send(loc, header, payload, keep_conn, ...)
+}
+as.Location.character <- function(x, port, ...) {
+	stopifnot(is.integer(port))
+	as.Location(.Call(C_loc_from_string, x, port))
 }
