@@ -32,14 +32,28 @@ rep.Location <- function(x, ...) {
 c.Location <- function(...) {
 	as.Location(c(sapply(list(...), unclass)))
 }
-as.data.frame.Location <- function(x, row.names=NULL, optional=FALSE, ...) {
-	nm <- deparse1(substitute(x))
-	df <- list2DF(list(unclass(x)))
-	if (optional)
-		names(df) <- nm
-	if (!is.null(row.names))
-		attr(df, "row.names") <- row.names
-        df
+
+# as per as.data.frame.raw etc.
+as.data.frame.Location <- function(x, row.names=NULL, optional=FALSE, ..., nm=deparse1(substitute(x))) {
+	force(nm)
+	nrows <- length(x)
+	if (!(is.null(row.names) || (is.character(row.names) && length(row.names) == nrows))) {
+		warning(gettextf("'row.names' is not a character vector of length %d -- omitting it. Will be an error!", 
+			nrows), domain = NA)
+		row.names <- NULL
+	}
+	if (is.null(row.names)) {
+		if (nrows == 0L) 
+			row.names <- character()
+		else if (length(row.names <- names(x)) != nrows || anyDuplicated(row.names)) 
+			row.names <- .set_row_names(nrows)
+	}
+	if (!is.null(names(x))) 
+		names(x) <- NULL
+	value <- list(x)
+	if (!optional) 
+		names(value) <- nm
+	structure(value, row.names = row.names, class = "data.frame")
 }
 
 as.list.Location <- function(x, ...) {
