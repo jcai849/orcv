@@ -51,12 +51,16 @@ send.FD <- function(x, header, payload=NULL, keep_conn=FALSE, ...) {
 	force(keep_conn)
 	serialised_payload <- serialize(payload, NULL)
 	header_length <- nchar(header, type="bytes") + 1L
-	fd <- .Call(C_send_socket, x, header_length, header, serialised_payload)
-	if (fd == -1) stop("send error")
+	fd <- as.FD(sapply(x, function(fd) .Call(C_send_socket, fd, header_length, header, serialised_payload)))
+	if (any(fd == -1)) stop("send error")
 	if (!keep_conn) close(x)
 	invisible(fd)
 }
 receive.FD <- function(x, keep_conn=FALSE, ...) {
+	if (length(x) > 1) {
+		message("Multiple FD's specified to receive. Using first supplied FD")
+		x <- x[1]
+	}
 	msg <- as.Message(.Call(C_receive_socket, x))
 	if (is.null(msg)) stop("receive error")
 	if (!keep_conn) {
@@ -65,7 +69,8 @@ receive.FD <- function(x, keep_conn=FALSE, ...) {
 	}
 	invisible(msg)
 }
-close.FD <- function(con, ...) {force(con); .Call(C_close_socket, con)}
+`[.FD` <- function(x, i) as.FD(unclass(x)[i])
+close.FD <- function(con, ...) {force(con); sapply(con, function(x) .Call(C_close_socket, x))}
 
 as.Message <- function(x, ...) {
 	stopifnot(is.list(x), length(x) == 4)
