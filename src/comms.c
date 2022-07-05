@@ -106,6 +106,8 @@ Message *receive_message(int fd)
         if_error((msg->payload = malloc(msg->payload_size)) == NULL, NULL);
         if_error(receive_data(fd, msg->payload, msg->payload_size), NULL);
 
+	printf("Received message from %s with header \"%s\"\n", inet_ntoa(client_name.sin_addr), msg->header);
+
         return msg;
 
 }
@@ -177,15 +179,22 @@ int send_socket(int sockfd, int header_size, char *header, int payload_size, uns
 int send_message(Message *msg)
 {
 	int fd = msg->fd;
-	struct in_addr addr;
+	struct sockaddr_in peername;
+	socklen_t namelen = sizeof peername;
 
-	addr.s_addr = msg->addr;
+	if_error(getpeername(fd, (struct sockaddr *) &peername, &namelen), -1);
+	
+	printf("Sending message with header \"%s\" to address %s port %d\n",
+		msg->header, inet_ntoa(peername.sin_addr), ntohs(peername.sin_port));
+
         if_error(send(fd, &msg->addr, sizeof msg->addr, 0) != sizeof msg->addr, -1);
         if_error(send(fd, &msg->port, sizeof msg->port, 0) != sizeof msg->port, -1);
         if_error(send(fd, &msg->header_size, sizeof msg->header_size, 0) != sizeof msg->header_size, -1);
         if_error(send_data(fd, msg->header, msg->header_size) == -1, -1);
         if_error(send(fd, &msg->payload_size, sizeof msg->payload_size, 0) != sizeof msg->payload_size, -1);
         if_error(send_data(fd, msg->payload, msg->payload_size) == -1, -1);
+	
+	printf("Message sent to %s port %d\n", inet_ntoa(peername.sin_addr), ntohs(peername.sin_port));
 
         return 0;
 }

@@ -48,7 +48,6 @@ for (i in 1:100) send(l1, h1, p1)
 fd_c <- send(l1, h1, p1, keep_conn=T)
 # 3) send a bunch to fd c before other receive
 for (i in 1:100) send(fd_c, h1, p1, keep_conn=T)
-# 4) send a bunch to fd c after other receive
 
 Sys.sleep(2)
 q("no")

@@ -7,6 +7,7 @@ receive <- function(x, keep_conn=FALSE, ...)  {
 	if (missing(x)) {
 		msg <- as.Message(.Call(C_next_message)) 
 		if (is.null(msg)) stop("receive error")
+		cat(sprintf("Opening message with header \"%s\"\n", header(msg)))
 		if (!keep_conn) {
 			close(msg)
 			fd(msg) <- as.FD(-1L)
@@ -39,11 +40,12 @@ send.FD <- function(x, header, payload=NULL, keep_conn=FALSE, ...) {
 }
 receive.FD <- function(x, keep_conn=FALSE, ...) {
 	if (length(x) > 1) {
-		message("Multiple FD's specified to receive. Using first supplied FD")
+		message("Multiple FD's specified to receive from. Using first supplied FD")
 		x <- x[1]
 	}
 	msg <- as.Message(.Call(C_receive_socket, x))
 	if (is.null(msg)) stop("receive error")
+	cat(sprintf("Opening message with header \"%s\"\n", header(msg)))
 	if (!keep_conn) {
 		close(msg)
 		fd(msg) <- as.FD(-1L)
