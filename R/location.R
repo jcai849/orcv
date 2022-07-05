@@ -26,8 +26,8 @@ is.Location <- function(x, ...) {
 	inherits(x, "Location")
 }
 
-rep.Location <- function(x, times) {
-	as.Location(rep(unclass(x), times))
+rep.Location <- function(x, ...) {
+	as.Location(rep(unclass(x), ...))
 }
 c.Location <- function(...) {
 	as.Location(c(sapply(list(...), unclass)))
