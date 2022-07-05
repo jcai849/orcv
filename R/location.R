@@ -72,18 +72,15 @@ as.list.Location <- function(x, ...) {
 address.Location <- function(x, ...) vapply(unclass(x), "[[", integer(1), 1)
 port.Location <- function(x, ...) vapply(unclass(x), "[[", integer(1), 2)
 
-format.Location <- function(x, ...) {
-	format(data.frame(address=address(x), port=port(x)))
-}
 print.Location <- function(x, ...) {
-	cat("Location:\n")
+	cat("Location (Address, Port):\n")
 	print(format(x))
 }
 
 Ops.Location <- function(e1, e2) {
 	stopifnot(is.Location(e2))
-	do.call(.Generic, address(e1), address(e2)) &
-		do.call(.Generic, port(e1), port(e2))
+	do.call(.Generic, list(address(e1), address(e2))) &
+		do.call(.Generic, list(port(e1), port(e2)))
 }
 
 send.Location <- function(x, header, payload=NULL, keep_conn=FALSE, ...) {

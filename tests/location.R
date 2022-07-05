@@ -1,3 +1,5 @@
+library(orcv)
+
 l0 <- location(0)
 address(l0)
 port(l0)
@@ -11,13 +13,11 @@ port(l2)
 la <- as.Location("localhost", 0L)
 lb <- as.Location("localhost", 9000L)
 
-format(la)
 print(la)
 
 dfa <- data.frame(a=la, b=lb)
 lc <- c(la, lb)
-dfb <- data.frame(a=la, b=lb, c=lc)
-rbind(dfa, dfb)
+rbind(dfa, dfa)
 
 lapply(la, identity)
 lapply(lc, identity)
@@ -30,3 +30,6 @@ la == lc
 lb == lb
 la == l0
 la == l1
+
+dfa$a == la
+dfa$b == lb
