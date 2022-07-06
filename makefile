@@ -5,6 +5,6 @@ install: R/orcv.R src/*.c src/*.h
 tags:
 	uctags -R
 test:
-	cd tests && ./test.sh
+	cd tests && tmux new-session \; source-file test.tmux
 flow: # e.g. make flow SYMBOL=C_multiplex
 	cflow -Tm $(SYMBOL) src/*.c | bash exec/tree2dotx | dot -Tsvg >$(SYMBOL)-flow.svg
