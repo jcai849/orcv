@@ -7,6 +7,7 @@
 #include <ifaddrs.h>
 #include <sys/types.h>
 #include <netdb.h>
+#include <Rinternals.h>
 #include "comms.h"
 
 in_addr_t self_address; /* both stored as  */
@@ -90,7 +91,8 @@ Message *receive_message(int fd)
         struct in_addr addr;
 
 	getpeername(fd, (struct sockaddr *) &client_name, &client_namelen);
-	printf("Receiving message from %s\n", inet_ntoa(client_name.sin_addr));
+	printf("Attempting to receive message from %s port %d over FD %d\n",
+	       inet_ntoa(client_name.sin_addr), ntohs(client_name.sin_port), fd);
 
         if_error((msg = malloc(sizeof(*msg))) == NULL, NULL);
 	msg->fd = fd;
@@ -106,7 +108,8 @@ Message *receive_message(int fd)
         if_error((msg->payload = malloc(msg->payload_size)) == NULL, NULL);
         if_error(receive_data(fd, msg->payload, msg->payload_size), NULL);
 
-	printf("Received message from %s with header \"%s\"\n", inet_ntoa(client_name.sin_addr), msg->header);
+	printf("Received message from %s port %d over fd %d with header \"%s\"\n",
+	       inet_ntoa(client_name.sin_addr), ntohs(client_name.sin_port), fd, msg->header);
 
         return msg;
 
@@ -120,7 +123,10 @@ int receive_data(int sockfd, void *data, int len)
                 need = (len - i > MAX_RECV_SIZE) ? MAX_RECV_SIZE : (len - i);
                 n = recv(sockfd, data + i, need, 0);
                 if (n < 0) {
-                        if (errno == EAGAIN || errno == EWOULDBLOCK) continue;
+                        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+				R_CheckUserInterrupt();
+				continue;
+			}
                         fprintf(stderr, "Read error on descriptor %d: %s", sockfd, strerror(errno));
                         if_error(close(sockfd) == -1, -1);
                         sockfd = -1;
@@ -184,8 +190,8 @@ int send_message(Message *msg)
 
 	if_error(getpeername(fd, (struct sockaddr *) &peername, &namelen), -1);
 	
-	printf("Sending message with header \"%s\" to address %s port %d\n",
-		msg->header, inet_ntoa(peername.sin_addr), ntohs(peername.sin_port));
+	printf("Attempting to send message with header \"%s\" to address %s port %d over fd %d\n",
+		msg->header, inet_ntoa(peername.sin_addr), ntohs(peername.sin_port), fd);
 
         if_error(send(fd, &msg->addr, sizeof msg->addr, 0) != sizeof msg->addr, -1);
         if_error(send(fd, &msg->port, sizeof msg->port, 0) != sizeof msg->port, -1);
@@ -194,7 +200,7 @@ int send_message(Message *msg)
         if_error(send(fd, &msg->payload_size, sizeof msg->payload_size, 0) != sizeof msg->payload_size, -1);
         if_error(send_data(fd, msg->payload, msg->payload_size) == -1, -1);
 	
-	printf("Message sent to %s port %d\n", inet_ntoa(peername.sin_addr), ntohs(peername.sin_port));
+	printf("Message sent to %s port %d over fd %d\n", inet_ntoa(peername.sin_addr), ntohs(peername.sin_port), fd);
 
         return 0;
 }

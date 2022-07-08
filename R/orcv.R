@@ -2,7 +2,10 @@ header <- function(x, ...) UseMethod("header", x)
 payload <- function(x, ...) UseMethod("payload", x)
 fd <- function(x, ...) UseMethod("fd", x)
 `fd<-` <- function(x, value) UseMethod("fd<-", x)
-send <- function(x, ...) UseMethod("send", x)
+send <- function(x, ...) {
+	stopifnot(length(x) > 0)
+	UseMethod("send", x)
+}
 receive <- function(x, keep_conn=FALSE, ...)  {
 	if (missing(x)) {
 		msg <- as.Message(.Call(C_next_message)) 
@@ -23,6 +26,7 @@ start <- function(address=NULL, port=0L, threads=getOption("orcv.cores", 4L)) {
 	invisible(.Call(C_start, address, port, threads))
 }
 
+is.FD <- function(x, ...) inherits(x, "FD")
 as.FD <- function(x, ...) {
 	stopifnot(is.integer(x))
 	class(x) <- "FD"

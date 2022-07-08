@@ -16,9 +16,11 @@ export(
 	header,
 	payload,
 	fd,
+	is.FD,
 	address,
 	port,
-	as.Location
+	as.Location,
+	is.Location
 )
 
 S3method(header, Message)
