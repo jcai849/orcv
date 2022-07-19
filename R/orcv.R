@@ -57,7 +57,9 @@ receive.FD <- function(x, keep_conn=FALSE, ...) {
 	invisible(msg)
 }
 `[.FD` <- function(x, i) as.FD(unclass(x)[i])
-close.FD <- function(con, ...) {force(con); sapply(con, function(x) .Call(C_close_socket, x))}
+close.FD <- function(con, ...) {
+	force(con)
+	sapply(con, function(x) stopifnot(.Call(C_close_socket, x) == 0))}
 
 as.Message <- function(x, ...) {
 	stopifnot(is.list(x), length(x) == 4)
