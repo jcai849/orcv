@@ -112,6 +112,7 @@ SEXP C_close_socket(SEXP fd)
 
 	error = PROTECT(allocVector(INTSXP, 1));
 	INTEGER(error)[0] = close(INTEGER(fd)[0]);
+	printf("FD %d closed", sockfd);
 
 	UNPROTECT(1);
 	return error;

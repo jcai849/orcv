@@ -72,6 +72,7 @@ void *listener(void *arg)
 
 	while (1) {
 		if_error((connfd = accept(listenfd, (struct sockaddr *) &client_addr, &client_addrlen)) == -1, NULL);
+		printf("FD %d opened", connfd);
 		printf("Accepted connection from %s\n", inet_ntoa(client_addr.sin_addr));
 		if_error((queuedfd = malloc(sizeof(*queuedfd))) == NULL, NULL);
 		*queuedfd = connfd;
@@ -83,14 +84,10 @@ void *receiver(void *arg)
 {
 	int *client_fd;
 	Message *msg;
-	struct sockaddr_in client_name;
-	socklen_t client_namelen = sizeof client_name;
 
 	while (1) {
 		if_error((client_fd = tsqueue_dequeue(&fd_queue)) == NULL, NULL);
 		if_error((msg = receive_message(*client_fd)) == NULL, NULL);
-		getpeername(*client_fd, (struct sockaddr *) &client_name, &client_namelen);
-		printf("Message received from %s\n", inet_ntoa(client_name.sin_addr)); 
 		free(client_fd);
 		if_error(tsqueue_enqueue(&event_queue, msg), NULL);
 	}

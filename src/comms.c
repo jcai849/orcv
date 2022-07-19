@@ -129,11 +129,13 @@ int receive_data(int sockfd, void *data, int len)
 			}
                         fprintf(stderr, "Read error on descriptor %d: %s", sockfd, strerror(errno));
                         if_error(close(sockfd) == -1, -1);
+			printf("FD %d closed", sockfd);
                         sockfd = -1;
                         return -1;
                 } else if (n == 0) {
                         fprintf(stderr, "Connection closed on descriptor %d before all data was received", sockfd);
                         if_error(close(sockfd) == -1, -1);
+			printf("FD %d closed", sockfd);
                         sockfd = -1;
                         return -1;
                 }
@@ -154,12 +156,14 @@ int get_socket(int addr, int port)
         servaddr.sin_addr.s_addr = htonl(addr);
         do {
                 if_error((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1, -1);
+		printf("FD %d opened", sockfd);
                 no_connect = connect(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
                 if (no_connect) {
                         perror(NULL);
                         if_error(fprintf(stderr, "Attempting reconnect to %s port %d (attempt #%d)\n",
 					 inet_ntoa(servaddr.sin_addr), port, ++reconnections) < 0, -1);
                         if_error(close(sockfd) == -1, -1);
+			printf("FD %d closed", sockfd);
                         sleep(CONN_SLEEP);
                 }
         } while (no_connect);
@@ -215,6 +219,7 @@ int send_data(int sockfd, const void *data, int len)
                 if (n < 1) {
                         perror(NULL);
                         if_error(close(sockfd) == -1, -1);
+			printf("FD %d closed", sockfd);
                         if_error(fprintf(stderr, "Failed to write (n=%d of %d) %s\n", n, need, (n == -1 && errno) ? strerror(errno) : ""
 ) < 0, -1);
                         return -1;
