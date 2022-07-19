@@ -88,5 +88,4 @@ Ops.Location <- function(e1, e2) {
 send.Location <- function(x, header, payload=NULL, keep_conn=FALSE, ...) {
         fd <- as.FD(mapply(function(a, p) .Call(C_get_socket, a, p),  address(x), port(x)))
         send(fd, header, payload, keep_conn, ...)
-        invisible(fd)
 }
