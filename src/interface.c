@@ -109,9 +109,11 @@ SEXP C_get_socket(SEXP addr, SEXP port)
 SEXP C_close_socket(SEXP fd)
 {
 	SEXP error;
+	int sockfd;
+	sockfd = INTEGER(fd)[0];
 
 	error = PROTECT(allocVector(INTSXP, 1));
-	INTEGER(error)[0] = close(INTEGER(fd)[0]);
+	INTEGER(error)[0] = close(sockfd);
 	printf("FD %d closed", sockfd);
 
 	UNPROTECT(1);
