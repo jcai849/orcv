@@ -42,19 +42,19 @@ send.FD <- function(x, header, payload=NULL, keep_conn=FALSE, ...) {
 	if (!keep_conn) close(x)
 	invisible(fd)
 }
-receive.FD <- function(x, keep_conn=FALSE, ...) {
-	if (length(x) > 1) {
-		message("Multiple FD's specified to receive from. Using first supplied FD")
-		x <- x[1]
-	}
-	msg <- as.Message(.Call(C_receive_socket, x))
-	if (is.null(msg)) stop("receive error")
+receive.FD <- function(x, keep_conn=FALSE, simplify=TRUE,...) {
+	msgs <- lapply(.Call(C_receive_socket, x), as.Message)
+	if (any(sapply(msgs, is.null))) stop("receive error")
 	cat(sprintf("Opening message with header \"%s\"\n", header(msg)))
 	if (!keep_conn) {
-		close(msg)
-		fd(msg) <- as.FD(-1L)
+		for (msg in msgs) {
+			close(msg)
+			fd(msg) <- as.FD(-1L)
+		}
 	}
-	invisible(msg)
+	if (simplify && length(msg) == 1L) {
+		unlist(msgs, recursive=FALSE, use.names=FALSE)
+	} else invisible(msgs)
 }
 `[.FD` <- function(x, i) as.FD(unclass(x)[i])
 close.FD <- function(con, ...) {
