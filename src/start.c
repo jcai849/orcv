@@ -8,7 +8,12 @@
 #include "start.h"
 #include "tsqueue.h"
 
-TSQueue fd_queue, event_queue;
+TSQueue recv_queue, background_queue, foreground_queue;
+
+struct ReceiverArgs {
+	int fd;
+	TSQueue *out_queue;
+};
 
 int start(const char *address, int port, int threads)
 {
@@ -23,11 +28,13 @@ int start(const char *address, int port, int threads)
 	addr = address ? address_from_string(address, port) : first_avail_iface();
 	if (addr == -1) return -1;
 	set_address(addr);
-	if_error(tsqueue_init(&fd_queue), -1);
-	if_error(tsqueue_init(&event_queue), -1);
+	if_error(tsqueue_init(&recv_queue), -1);
+	if_error(tsqueue_init(&background_queue), -1);
+	if_error(tsqueue_init(&foreground_queue), -1);
 	if_error(pthread_barrierattr_init(&bar_attr), -1);
 	if_error(pthread_barrier_init(&listener_barrier, &bar_attr, 2), -1);
 	if_error(pthread_create(&thread, NULL, &listener, &listener_barrier), -1);
+	
 	for (i = 0; i < threads; i++) {
 		if_error(pthread_create(&thread, NULL, &receiver, NULL), -1);
 	}
@@ -46,6 +53,7 @@ void *listener(void *arg)
 	struct sockaddr_in serv_addr, client_addr;
 	socklen_t serv_addrlen;
 	int barrier_error;
+	struct ReceiverArgs *receiver_args;
 	int yes = 1;
 	socklen_t client_addrlen = sizeof client_addr;
 
@@ -74,26 +82,50 @@ void *listener(void *arg)
 		if_error((connfd = accept(listenfd, (struct sockaddr *) &client_addr, &client_addrlen)) == -1, NULL);
 		printf("FD %d opened", connfd);
 		printf("Accepted connection from %s\n", inet_ntoa(client_addr.sin_addr));
-		if_error((queuedfd = malloc(sizeof(*queuedfd))) == NULL, NULL);
-		*queuedfd = connfd;
-		if_error(tsqueue_enqueue(&fd_queue, queuedfd), NULL);
+		receiver_args = malloc(sizeof(*receiver_args));
+		receiver_args->fd = connfd;
+		receiver_args->out_queue = &background_queue;
+		if_error(tsqueue_enqueue(&recv_queue, receiver_args), NULL);
 	}
 }
 
 void *receiver(void *arg)
 {
-	int *client_fd;
+	struct ReceiverArgs *receiver_args;
 	Message *msg;
 
 	while (1) {
-		if_error((client_fd = tsqueue_dequeue(&fd_queue)) == NULL, NULL);
-		if_error((msg = receive_message(*client_fd)) == NULL, NULL);
-		free(client_fd);
-		if_error(tsqueue_enqueue(&event_queue, msg), NULL);
+		if_error((receiver_args = tsqueue_dequeue(&recv_queue)) == NULL, NULL);
+		if_error((msg = receive_message(receiver_args->fd)) == NULL, NULL);
+		if_error(tsqueue_enqueue(receiver_args->out_queue, msg), NULL);
+		free(receiver_args);
 	}
 }
 
-Message *next_event(void)
+Message *next_background_message(void)
 {
-	return (Message *) tsqueue_dequeue(&event_queue);
+	return (Message *) tsqueue_dequeue(&background_queue);
+}
+
+Message **foreground_messages(int *fds, int nfds)
+{
+	Message *msglist;
+	struct ReceiverArgs *receiver_args;
+	
+	msglist = calloc(nfds, sizeof(*msglist))
+	receiver_args  = calloc(nfds, sizeof(*receiver_args))
+
+        while (nfds-- > 0) {
+                receiver_args->fd = c_fds++;
+                receiver_args++->queue = foreground_queue;
+                tsqueue_enqueue(recv_queue, receiver_args)
+        }
+
+        while (nfds-- > 0) {
+                msg = tsqueue_dequeue(&foreground_queue);
+		for (i=0; i<nfds; i++) if (i == fds[i]) break;
+		msglist[i] = msg;
+        }
+
+	return msglist;
 }

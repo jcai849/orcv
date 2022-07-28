@@ -33,38 +33,18 @@ SEXP C_next_message(void)
 
 SEXP C_receive_socket(SEXP fd)
 {
-	int *c_fds, rcvable_fd;
-	int nready;
-	int i, j;
-	nfds_t nfds;
-	struct pollfd *fds;
-	Message *event;
-	SEXP msglist, msg;
-	
+	int nfds;
+	struct ReceiverArgs *receiver_args;
+
 	c_fds = INTEGER(fd);
 	nfds = LENGTH(fd);
-	fds = calloc(nfds, sizeof *fds);
+	c_msglist = foreground_messages(c_fds, nfds);
+
 	msglist = PROTECT(allocVector(VECSXP, nfds));
 
-	for (i=0; i<nfds; i++) {
-		fds[i].fd = c_fds[i];
-		fds[i].events = POLLIN;
-	}
-	for (i=0; i<nfds; i++) {
-		nready = poll(fds, nfds, -1);
-		if (nready <= 0) return R_NilValue;
-		for (j=0; j<(nfds-i); j++) {
-			if (fds[i].revents & POLLIN) {
-				rcvable_fd = fds[i].fd;
-				fds[i].fd = -1;
-				break;
-			}
-		}
-		event = receive_message(rcvable_fd);
-		if (!event) return R_NilValue;
-		msg = msg_to_sexp(event);
-		delete_message(event);
-		SET_VECTOR_ELT(msglist, i, msg);
+	while (nfds-- > 0) {
+		SET_VECTOR_ELT(msglist, i, c_msglist[i]);
+		msg_to_sexp(msg);
 	}
 
 	UNPROTECT(1);
