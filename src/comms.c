@@ -88,7 +88,6 @@ Message *receive_message(int fd)
         Message *msg;
         struct sockaddr_in client_name;
         socklen_t client_namelen = sizeof client_name;
-        struct in_addr addr;
 
 	getpeername(fd, (struct sockaddr *) &client_name, &client_namelen);
 	printf("Attempting to receive message from %s port %d over FD %d\n",
@@ -98,7 +97,6 @@ Message *receive_message(int fd)
 	msg->fd = fd;
         if_error(recv(fd, &msg->addr, sizeof msg->addr, 0) != sizeof msg->addr, NULL);
         msg->addr = ntohl(msg->addr);
-	addr.s_addr = htonl(msg->addr);
         if_error(recv(fd, &msg->port, sizeof msg->port, 0) != sizeof msg->port, NULL);
         msg->port = ntohs(msg->port);
         if_error(recv(fd, &msg->header_size, sizeof msg->header_size, 0) != sizeof msg->header_size, NULL);

@@ -49,7 +49,7 @@ int start(const char *address, int port, int threads)
 
 void *listener(void *arg)
 {
-	int listenfd, connfd, *queuedfd;
+	int listenfd, connfd;
 	struct sockaddr_in serv_addr, client_addr;
 	socklen_t serv_addrlen;
 	int barrier_error;
@@ -95,7 +95,7 @@ void *receiver(void *arg)
 	Message *msg;
 
 	while (1) {
-		if_error((receiver_args = tsqueue_dequeue(&recv_queue)) == NULL, NULL);
+		if_error((receiver_args = tsqueue_dequeue(recv_queue)) == NULL, NULL);
 		if_error((msg = receive_message(receiver_args->fd)) == NULL, NULL);
 		if_error(tsqueue_enqueue(receiver_args->out_queue, msg), NULL);
 		free(receiver_args);
@@ -110,16 +110,17 @@ Message *next_background_message(void)
 Message *foreground_messages(int *fds, int nfds)
 {
 	Message *msglist;
+	Message *msg;
 	struct ReceiverArgs *receiver_args;
 	int i, j;
 	
-	msglist = calloc(nfds, sizeof(*msglist))
-	receiver_args  = calloc(nfds, sizeof(*receiver_args))
+	msglist = calloc(nfds, sizeof(*msglist));
 
 	for (i=0; i<nfds; i++) {
+		receiver_args  = malloc(sizeof(*receiver_args));
                 receiver_args[i].fd = fds[i];
-                receiver_args[i].queue = foreground_queue;
-                tsqueue_enqueue(recv_queue, receiver_args[i])
+                receiver_args[i].out_queue = foreground_queue;
+                tsqueue_enqueue(recv_queue, receiver_args);
         }
 
 	for (i=0; i<nfds; i++) {

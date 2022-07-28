@@ -22,7 +22,7 @@ SEXP C_next_message(void)
 	Message *event;
 	SEXP msg;
 
-	event = next_event();
+	event = next_background_message();
 	if (!event) return R_NilValue;
 
 	msg = msg_to_sexp(event);
@@ -38,6 +38,7 @@ SEXP C_receive_socket(SEXP fd)
 	int *c_fds;
 	struct ReceiverArgs *receiver_args;
 	Message *c_msglist;
+	SEXP msg;
 	SEXP msglist;
 
 	c_fds = INTEGER(fd);
@@ -48,12 +49,12 @@ SEXP C_receive_socket(SEXP fd)
 	msglist = PROTECT(allocVector(VECSXP, nfds));
 
 	for (i=0; i<nfds; i++) {
-		msg = msg_to_sexp(c_msglist[i]);
+		msg = PROTECT(msg_to_sexp(&c_msglist[i]));
 		delete_message(&c_msglist[i]);
 		SET_VECTOR_ELT(msglist, i, msg);
 	}
 
-	UNPROTECT(1);
+	UNPROTECT(nfds + 1);
 	return msglist;
 }
 
