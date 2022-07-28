@@ -8,7 +8,7 @@
 #include "start.h"
 #include "tsqueue.h"
 
-TSQueue recv_queue, background_queue, foreground_queue;
+TSQueue *recv_queue, *background_queue, *foreground_queue;
 
 struct ReceiverArgs {
 	int fd;
@@ -28,9 +28,9 @@ int start(const char *address, int port, int threads)
 	addr = address ? address_from_string(address, port) : first_avail_iface();
 	if (addr == -1) return -1;
 	set_address(addr);
-	if_error(tsqueue_init(&recv_queue), -1);
-	if_error(tsqueue_init(&background_queue), -1);
-	if_error(tsqueue_init(&foreground_queue), -1);
+	if_error(tsqueue_init(recv_queue), -1);
+	if_error(tsqueue_init(background_queue), -1);
+	if_error(tsqueue_init(foreground_queue), -1);
 	if_error(pthread_barrierattr_init(&bar_attr), -1);
 	if_error(pthread_barrier_init(&listener_barrier, &bar_attr, 2), -1);
 	if_error(pthread_create(&thread, NULL, &listener, &listener_barrier), -1);
@@ -84,8 +84,8 @@ void *listener(void *arg)
 		printf("Accepted connection from %s\n", inet_ntoa(client_addr.sin_addr));
 		receiver_args = malloc(sizeof(*receiver_args));
 		receiver_args->fd = connfd;
-		receiver_args->out_queue = &background_queue;
-		if_error(tsqueue_enqueue(&recv_queue, receiver_args), NULL);
+		receiver_args->out_queue = background_queue;
+		if_error(tsqueue_enqueue(recv_queue, receiver_args), NULL);
 	}
 }
 
@@ -104,27 +104,28 @@ void *receiver(void *arg)
 
 Message *next_background_message(void)
 {
-	return (Message *) tsqueue_dequeue(&background_queue);
+	return (Message *) tsqueue_dequeue(background_queue);
 }
 
-Message **foreground_messages(int *fds, int nfds)
+Message *foreground_messages(int *fds, int nfds)
 {
 	Message *msglist;
 	struct ReceiverArgs *receiver_args;
+	int i, j;
 	
 	msglist = calloc(nfds, sizeof(*msglist))
 	receiver_args  = calloc(nfds, sizeof(*receiver_args))
 
-        while (nfds-- > 0) {
-                receiver_args->fd = c_fds++;
-                receiver_args++->queue = foreground_queue;
-                tsqueue_enqueue(recv_queue, receiver_args)
+	for (i=0; i<nfds; i++) {
+                receiver_args[i].fd = fds[i];
+                receiver_args[i].queue = foreground_queue;
+                tsqueue_enqueue(recv_queue, receiver_args[i])
         }
 
-        while (nfds-- > 0) {
-                msg = tsqueue_dequeue(&foreground_queue);
-		for (i=0; i<nfds; i++) if (i == fds[i]) break;
-		msglist[i] = msg;
+	for (i=0; i<nfds; i++) {
+                msg = tsqueue_dequeue(foreground_queue);
+		for (j=0; j<nfds; j++) if (j == fds[j]) break;
+		msglist[j] = msg;
         }
 
 	return msglist;

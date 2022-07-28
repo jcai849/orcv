@@ -43,9 +43,9 @@ send.FD <- function(x, header, payload=NULL, keep_conn=FALSE, ...) {
 	invisible(fd)
 }
 receive.FD <- function(x, keep_conn=FALSE, simplify=TRUE,...) {
+	if (anyDuplicated(x)) stop()
 	msgs <- lapply(.Call(C_receive_socket, x), as.Message)
 	if (any(sapply(msgs, is.null))) stop("receive error")
-	cat(sprintf("Opening message with header \"%s\"\n", header(msg)))
 	if (!keep_conn) {
 		for (msg in msgs) {
 			close(msg)
