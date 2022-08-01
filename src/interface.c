@@ -36,8 +36,7 @@ SEXP C_receive_socket(SEXP fd)
 	int nfds;
 	int i;
 	int *c_fds;
-	struct ReceiverArgs *receiver_args;
-	Message *c_msglist;
+	Message **c_msglist;
 	SEXP msg;
 	SEXP msglist;
 
@@ -45,15 +44,13 @@ SEXP C_receive_socket(SEXP fd)
 	nfds = LENGTH(fd);
 	c_msglist = foreground_messages(c_fds, nfds);
 	if (!c_msglist) return R_NilValue;
-
 	msglist = PROTECT(allocVector(VECSXP, nfds));
-
 	for (i=0; i<nfds; i++) {
-		msg = PROTECT(msg_to_sexp(&c_msglist[i]));
-		delete_message(&c_msglist[i]);
+		msg = PROTECT(msg_to_sexp(c_msglist[i]));
+		delete_message(c_msglist[i]);
 		SET_VECTOR_ELT(msglist, i, msg);
 	}
-
+	free(c_msglist);
 	UNPROTECT(nfds + 1);
 	return msglist;
 }

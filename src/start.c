@@ -8,7 +8,7 @@
 #include "start.h"
 #include "tsqueue.h"
 
-TSQueue *recv_queue, *background_queue, *foreground_queue;
+TSQueue recv_queue, background_queue, foreground_queue;
 
 struct ReceiverArgs {
 	int fd;
@@ -28,9 +28,9 @@ int start(const char *address, int port, int threads)
 	addr = address ? address_from_string(address, port) : first_avail_iface();
 	if (addr == -1) return -1;
 	set_address(addr);
-	if_error(tsqueue_init(recv_queue), -1);
-	if_error(tsqueue_init(background_queue), -1);
-	if_error(tsqueue_init(foreground_queue), -1);
+	if_error(tsqueue_init(&recv_queue), -1);
+	if_error(tsqueue_init(&background_queue), -1);
+	if_error(tsqueue_init(&foreground_queue), -1);
 	if_error(pthread_barrierattr_init(&bar_attr), -1);
 	if_error(pthread_barrier_init(&listener_barrier, &bar_attr, 2), -1);
 	if_error(pthread_create(&thread, NULL, &listener, &listener_barrier), -1);
@@ -84,8 +84,8 @@ void *listener(void *arg)
 		printf("Accepted connection from %s\n", inet_ntoa(client_addr.sin_addr));
 		receiver_args = malloc(sizeof(*receiver_args));
 		receiver_args->fd = connfd;
-		receiver_args->out_queue = background_queue;
-		if_error(tsqueue_enqueue(recv_queue, receiver_args), NULL);
+		receiver_args->out_queue = &background_queue;
+		if_error(tsqueue_enqueue(&recv_queue, receiver_args), NULL);
 	}
 }
 
@@ -95,7 +95,7 @@ void *receiver(void *arg)
 	Message *msg;
 
 	while (1) {
-		if_error((receiver_args = tsqueue_dequeue(recv_queue)) == NULL, NULL);
+		if_error((receiver_args = tsqueue_dequeue(&recv_queue)) == NULL, NULL);
 		if_error((msg = receive_message(receiver_args->fd)) == NULL, NULL);
 		if_error(tsqueue_enqueue(receiver_args->out_queue, msg), NULL);
 		free(receiver_args);
@@ -104,7 +104,7 @@ void *receiver(void *arg)
 
 Message *next_background_message(void)
 {
-	return (Message *) tsqueue_dequeue(background_queue);
+	return (Message *) tsqueue_dequeue(&background_queue);
 }
 
 Message **foreground_messages(int *fds, int nfds)
@@ -115,17 +115,15 @@ Message **foreground_messages(int *fds, int nfds)
 	int i, j;
 	
 	msglist = calloc(nfds, sizeof(*msglist));
-
 	for (i=0; i<nfds; i++) {
 		receiver_args  = malloc(sizeof(*receiver_args));
                 receiver_args[i].fd = fds[i];
-                receiver_args[i].out_queue = foreground_queue;
-                tsqueue_enqueue(recv_queue, receiver_args);
+                receiver_args[i].out_queue = &foreground_queue;
+                tsqueue_enqueue(&recv_queue, receiver_args);
         }
-
 	for (i=0; i<nfds; i++) {
-                msg = tsqueue_dequeue(foreground_queue);
-		for (j=0; j<nfds; j++) if (j == fds[j]) break;
+                msg = tsqueue_dequeue(&foreground_queue);
+		for (j=0; j<nfds; j++) if (msg->fd == fds[j]) break;
 		msglist[j] = msg;
         }
 
