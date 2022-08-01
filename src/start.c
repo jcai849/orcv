@@ -107,9 +107,9 @@ Message *next_background_message(void)
 	return (Message *) tsqueue_dequeue(background_queue);
 }
 
-Message *foreground_messages(int *fds, int nfds)
+Message **foreground_messages(int *fds, int nfds)
 {
-	Message *msglist;
+	Message **msglist;
 	Message *msg;
 	struct ReceiverArgs *receiver_args;
 	int i, j;
