@@ -6,7 +6,7 @@ send <- function(x, ...) {
 	stopifnot(length(x) > 0)
 	UseMethod("send", x)
 }
-receive <- function(x, keep_conn=FALSE, ...)  {
+receive <- function(x, keep_conn=FALSE, simplify=TRUE, ...)  {
 	if (missing(x)) {
 		msg <- as.Message(.Call(C_next_message)) 
 		if (is.null(msg)) stop("receive error")
@@ -15,6 +15,7 @@ receive <- function(x, keep_conn=FALSE, ...)  {
 			close(msg)
 			fd(msg) <- as.FD(-1L)
 		}
+		if (!simplify) msg <- list(msg)
 		invisible(msg)
 	} else UseMethod("receive", x)
 }
