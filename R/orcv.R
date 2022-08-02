@@ -26,6 +26,7 @@ start <- function(address=NULL, port=0L, threads=getOption("orcv.cores", 4L)) {
 	invisible(.Call(C_start, address, port, threads))
 }
 
+c.fd <- function(...) as.FD(do.call(c, lapply(list(...), unclass)))
 is.FD <- function(x, ...) inherits(x, "FD")
 as.FD <- function(x, ...) {
 	stopifnot(is.integer(x))

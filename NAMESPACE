@@ -33,6 +33,7 @@ S3method(send, Message)
 S3method(send, FD)
 S3method(receive, FD)
 S3method(close, FD)
+S3method(c, FD)
 
 S3method(send, character)
 S3method(location, numeric)
