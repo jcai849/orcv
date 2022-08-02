@@ -117,8 +117,8 @@ Message **foreground_messages(int *fds, int nfds)
 	msglist = calloc(nfds, sizeof(*msglist));
 	for (i=0; i<nfds; i++) {
 		receiver_args  = malloc(sizeof(*receiver_args));
-                receiver_args[i].fd = fds[i];
-                receiver_args[i].out_queue = &foreground_queue;
+                receiver_args->fd = fds[i];
+                receiver_args->out_queue = &foreground_queue;
                 tsqueue_enqueue(&recv_queue, receiver_args);
         }
 	for (i=0; i<nfds; i++) {
