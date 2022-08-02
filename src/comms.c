@@ -154,7 +154,7 @@ int get_socket(int addr, int port)
         servaddr.sin_addr.s_addr = htonl(addr);
         do {
                 if_error((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1, -1);
-		printf("FD %d opened", sockfd);
+		printf("FD %d opened\n", sockfd);
                 no_connect = connect(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
                 if (no_connect) {
                         perror(NULL);

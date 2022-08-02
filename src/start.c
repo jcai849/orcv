@@ -80,7 +80,7 @@ void *listener(void *arg)
 
 	while (1) {
 		if_error((connfd = accept(listenfd, (struct sockaddr *) &client_addr, &client_addrlen)) == -1, NULL);
-		printf("FD %d opened", connfd);
+		printf("FD %d opened\n", connfd);
 		printf("Accepted connection from %s\n", inet_ntoa(client_addr.sin_addr));
 		receiver_args = malloc(sizeof(*receiver_args));
 		receiver_args->fd = connfd;
