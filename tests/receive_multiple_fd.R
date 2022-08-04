@@ -14,6 +14,7 @@ library(orcv)
 start("localhost", 12345L, threads=4L)
 
 msgs <- lapply(N, function(...) receive(keep_conn=T))
-fds <- do.call(c, lapply(msgs, fd))
+fds <- as.FD(sample(do.call(c, lapply(msgs, fd)), length(N)))
 
-receive(fds)
+mult <- receive(fds)
+stopifnot(all(sapply(mult, fd) == fds))

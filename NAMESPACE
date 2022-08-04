@@ -17,6 +17,7 @@ export(
 	payload,
 	fd,
 	is.FD,
+	as.FD,
 	address,
 	port,
 	as.Location,
