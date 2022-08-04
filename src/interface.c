@@ -85,7 +85,7 @@ SEXP C_send_socket(SEXP fd, SEXP header_length, SEXP header, SEXP payload)
 {
 	int c_fd, c_header_length;
 	int payload_size;
-	char *c_payload;
+	unsigned char *c_payload;
 	char *c_header;
 	int c_error;
 	SEXP error;
