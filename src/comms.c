@@ -118,6 +118,7 @@ error_second_alloc:
 	free(msg->header);
 error_first_alloc:
 	close(fd);
+	printf("FD %d closed\n", fd);
 	free(msg);
 	return NULL;
 }
