@@ -95,9 +95,9 @@ void *receiver(void *arg)
 	Message *msg;
 
 	while (1) {
-		if_error((receiver_args = tsqueue_dequeue(&recv_queue)) == NULL, NULL);
-		if_error((msg = receive_message(receiver_args->fd)) == NULL, NULL);
-		if_error(tsqueue_enqueue(receiver_args->out_queue, msg), NULL);
+		receiver_args = tsqueue_dequeue(&recv_queue);
+		msg = receive_message(receiver_args->fd);
+		tsqueue_enqueue(receiver_args->out_queue, msg);
 		free(receiver_args);
 	}
 }
@@ -116,13 +116,15 @@ Message **foreground_messages(int *fds, int nfds)
 	
 	msglist = calloc(nfds, sizeof(*msglist));
 	for (i=0; i<nfds; i++) {
-		receiver_args  = malloc(sizeof(*receiver_args));
+		msglist[i] = NULL;
+		receiver_args = malloc(sizeof(*receiver_args));
                 receiver_args->fd = fds[i];
                 receiver_args->out_queue = &foreground_queue;
                 tsqueue_enqueue(&recv_queue, receiver_args);
         }
 	for (i=0; i<nfds; i++) {
                 msg = tsqueue_dequeue(&foreground_queue);
+		if (!msg) continue;
 		for (j=0; j<nfds; j++) if (msg->fd == fds[j]) break;
 		msglist[j] = msg;
         }

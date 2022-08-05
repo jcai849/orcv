@@ -83,7 +83,7 @@ in_addr_t address_from_string(const char *address, int port)
 	return ntohl(addr);
 }
 
-Message *receive_message(int fd)
+Message *receive_message(int fd) /* error labels at end of function */
 {
         Message *msg;
         struct sockaddr_in client_name;
@@ -93,24 +93,33 @@ Message *receive_message(int fd)
 	printf("Attempting to receive message from %s port %d over FD %d\n",
 	       inet_ntoa(client_name.sin_addr), ntohs(client_name.sin_port), fd);
 
-        if_error((msg = malloc(sizeof(*msg))) == NULL, NULL);
+        if (!(msg = malloc(sizeof(*msg)))) return NULL;
+
 	msg->fd = fd;
-        if_error(recv(fd, &msg->addr, sizeof msg->addr, 0) != sizeof msg->addr, NULL);
+        if (recv(fd, &msg->addr, sizeof msg->addr, 0) != sizeof msg->addr) goto error_first_alloc;
         msg->addr = ntohl(msg->addr);
-        if_error(recv(fd, &msg->port, sizeof msg->port, 0) != sizeof msg->port, NULL);
+        if (recv(fd, &msg->port, sizeof msg->port, 0) != sizeof msg->port) goto error_first_alloc;
         msg->port = ntohs(msg->port);
-        if_error(recv(fd, &msg->header_size, sizeof msg->header_size, 0) != sizeof msg->header_size, NULL);
-        if_error((msg->header = calloc(msg->header_size, sizeof &msg->header)) == NULL, NULL);
-        if_error(receive_data(fd, msg->header, msg->header_size), NULL);
-        if_error(recv(fd, &msg->payload_size, sizeof msg->payload_size, 0) != sizeof msg->payload_size, NULL);
-        if_error((msg->payload = malloc(msg->payload_size)) == NULL, NULL);
-        if_error(receive_data(fd, msg->payload, msg->payload_size), NULL);
+        if (recv(fd, &msg->header_size, sizeof msg->header_size, 0) != sizeof msg->header_size) goto error_first_alloc;
+        if (!(msg->header = calloc(msg->header_size, sizeof &msg->header))) { perror(NULL); goto error_first_alloc; }
+        if (receive_data(fd, msg->header, msg->header_size)) goto error_second_alloc;
+        if (recv(fd, &msg->payload_size, sizeof msg->payload_size, 0) != sizeof msg->payload_size) goto error_second_alloc;
+        if (!(msg->payload = malloc(msg->payload_size))) goto error_second_alloc;
+        if (receive_data(fd, msg->payload, msg->payload_size)) goto error_third_alloc;
 
 	printf("Received message from %s port %d over fd %d with header \"%s\"\n",
 	       inet_ntoa(client_name.sin_addr), ntohs(client_name.sin_port), fd, msg->header);
 
         return msg;
 
+error_third_alloc:
+	free(msg->payload);
+error_second_alloc:
+	free(msg->header);
+error_first_alloc:
+	close(fd);
+	free(msg);
+	return NULL;
 }
 
 int receive_data(int sockfd, void *data, int len)
@@ -126,16 +135,10 @@ int receive_data(int sockfd, void *data, int len)
 				continue;
 			}
                         fprintf(stderr, "Read error on descriptor %d: %s", sockfd, strerror(errno));
-                        if_error(close(sockfd) == -1, -1);
-			printf("FD %d closed", sockfd);
-                        sockfd = -1;
-                        return -1;
+                        return 1;
                 } else if (n == 0) {
                         fprintf(stderr, "Connection closed on descriptor %d before all data was received", sockfd);
-                        if_error(close(sockfd) == -1, -1);
-			printf("FD %d closed", sockfd);
-                        sockfd = -1;
-                        return -1;
+                        return 1;
                 }
                 i += n;
         }
