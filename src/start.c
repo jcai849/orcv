@@ -115,6 +115,7 @@ Message **foreground_messages(int *fds, int nfds)
 	int i, j;
 	
 	msglist = calloc(nfds, sizeof(*msglist));
+/* TODO: improve by selecting on fds and sending the readable ones first */
 	for (i=0; i<nfds; i++) {
 		msglist[i] = NULL;
 		receiver_args = malloc(sizeof(*receiver_args));
