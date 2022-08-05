@@ -8,8 +8,9 @@ send <- function(x, ...) {
 }
 receive <- function(x, keep_conn=FALSE, simplify=TRUE, ...)  {
 	if (missing(x)) {
-		msg <- as.Message(.Call(C_next_message)) 
-		if (is.null(msg)) stop("receive error")
+		next_msg <- .Call(C_next_message)
+		if (is.null(next_msg)) stop("receive error")
+		msg <- as.Message(next_msg) 
 		cat(sprintf("Opening message with header \"%s\"\n", header(msg)))
 		if (!keep_conn) {
 			close(msg)
@@ -45,9 +46,10 @@ send.FD <- function(x, header, payload=NULL, keep_conn=FALSE, ...) {
 	invisible(fd)
 }
 receive.FD <- function(x, keep_conn=FALSE, simplify=TRUE,...) {
-	if (anyDuplicated(x)) stop()
-	msgs <- lapply(.Call(C_receive_socket, x), as.Message)
-	if (any(sapply(msgs, is.null))) stop("receive error")
+	if (anyDuplicated(x)) stop("duplicate fds given as input")
+	next_msgs <- .Call(C_receive_socket, x)
+	if (any(sapply(next_msgs, is.null))) stop("receive error")
+	msgs <- lapply(next_msgs, as.Message)
 	if (!keep_conn) {
 		for (msg in msgs) {
 			close(msg)
