@@ -74,7 +74,6 @@ in_addr_t address_from_string(const char *address, int port)
 	error = getaddrinfo(address, service, &hints, &result);
 	if (error) {
 		perror(gai_strerror(error));
-		freeaddrinfo(result);
 		return -1;
 	}
 	addr = ((struct sockaddr_in *) result->ai_addr)->sin_addr.s_addr;
