@@ -71,6 +71,9 @@ as.list.Location <- function(x, ...) {
 `[[.Location` <- `[.Location`
 `[[<-.Location` <- `[<-.Location`
 
+unique.Location <- function(x,incomparables=FALSE, fromLast=FALSE, nmax=NA, ...)
+	as.Location(unique(unclass(x), incomparables=incomparables, fromLast=fromLast, nmax=nmax, ...))
+
 address.Location <- function(x, ...) vapply(unclass(x), "[[", integer(1), 1)
 port.Location <- function(x, ...) vapply(unclass(x), "[[", integer(1), 2)
 
