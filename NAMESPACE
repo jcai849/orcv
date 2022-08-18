@@ -1,58 +1,60 @@
 useDynLib(orcv,
-	C_start,
+	C_close_socket,
+	C_get_socket,
+	C_loc_from_string,
+	C_location,
 	C_next_message,
 	C_receive_socket,
 	C_send_socket,
-	C_get_socket,
-	C_close_socket,
-	C_location,
-	C_loc_from_string
+	C_start
 )
+
 export(
-	start,
+	address,
+	as.FD,
+	as.Location,
+	fd,
+	header,
+	is.FD,
+	is.Location,
+	location,
+	payload,
+	port,
 	receive,
 	send,
-	location,
-	header,
-	payload,
-	fd,
-	is.FD,
-	as.FD,
-	address,
-	port,
-	as.Location,
-	is.Location
+	start
 )
 
-S3method(header, Message)
-S3method(payload, Message)
-S3method(location, Message)
-S3method(fd, Message)
 S3method(close, Message)
+S3method(fd, Message)
+S3method(header, Message)
+S3method(location, Message)
+S3method(payload, Message)
 S3method(send, Message)
 
-S3method(send, FD)
-S3method(receive, FD)
-S3method(close, FD)
 S3method(c, FD)
+S3method(close, FD)
+S3method(receive, FD)
+S3method(send, FD)
 
-S3method(send, character)
-S3method(location, numeric)
 S3method(location, integer)
+S3method(location, numeric)
+S3method(send, character)
 
-S3method(as.Location, character)
-S3method(as.Location, integer)
-S3method(as.Location, list)
-S3method(address, Location)
-S3method(port, Location)
-S3method(rep, Location)
-S3method(c, Location)
-S3method(as.data.frame, Location)
-S3method(as.list, Location)
 S3method("[", Location)
 S3method("[<-", Location)
 S3method("[[", Location)
 S3method("[[<-", Location)
-S3method(print, Location)
 S3method(Ops, Location)
+S3method(address, Location)
+S3method(as.Location, character)
+S3method(as.Location, integer)
+S3method(as.Location, list)
+S3method(as.data.frame, Location)
+S3method(as.list, Location)
+S3method(c, Location)
+S3method(port, Location)
+S3method(print, Location)
+S3method(rep, Location)
 S3method(send, Location)
+S3method(unique, Location)
