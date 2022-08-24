@@ -1,7 +1,5 @@
 header <- function(x, ...) UseMethod("header", x)
 payload <- function(x, ...) UseMethod("payload", x)
-fd <- function(x, ...) UseMethod("fd", x)
-`fd<-` <- function(x, value) UseMethod("fd<-", x)
 send <- function(x, ...) {
 	stopifnot(length(x) > 0)
 	UseMethod("send", x)
@@ -28,6 +26,8 @@ start <- function(address=NULL, port=0L, threads=getOption("orcv.cores", 4L)) {
 	invisible(.Call(C_start, address, port, threads))
 }
 
+fd <- function(x, ...) UseMethod("fd", x)
+`fd<-` <- function(x, value) UseMethod("fd<-", x)
 c.FD <- function(...) as.FD(do.call(c, lapply(list(...), unclass)))
 is.FD <- function(x, ...) inherits(x, "FD")
 as.FD <- function(x, ...) {
@@ -71,6 +71,9 @@ split.FD <- function(x, f, drop=FALSE, sep=".", lex.order=FALSE, ...)
 `[.FD` <- function(x, i) as.FD(unclass(x)[[i]])
 `[[.FD` <- function(x, i) x[i]
 rep.FD <- function(x, ...) as.FD(rep(unclass(x), ...))
+as.data.frame.FD <- function(x, ..., nm=deparse1(substitute(x))) {
+	as.data.frame.vector(x, ..., nm=nm)
+}
 
 as.Message <- function(x, ...) {
 	stopifnot(is.list(x), length(x) == 4)
