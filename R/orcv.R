@@ -60,7 +60,6 @@ receive.FD <- function(x, keep_conn=FALSE, simplify=TRUE,...) {
 		unlist(msgs, recursive=FALSE, use.names=FALSE)
 	} else invisible(msgs)
 }
-`[.FD` <- function(x, i) as.FD(unclass(x)[i])
 close.FD <- function(con, ...) {
 	force(con)
 	sapply(con, function(x) stopifnot(.Call(C_close_socket, x) == 0))}
@@ -68,7 +67,7 @@ unique.FD <- function(x, incomparables=FALSE, fromLast=FALSE, nmax=NA, ...)
 		as.FD(unique(unclass(x), incomparables, fromLast, nmax, ...))
 split.FD <- function(x, f, drop=FALSE, sep=".", lex.order=FALSE, ...)
 		lapply(split(unclass(x), f, drop, sep, lex.order, ...), as.FD)
-`[.FD` <- function(x, i) as.FD(unclass(x)[[i]])
+`[.FD` <- function(x, i) as.FD(unclass(x)[i])
 `[[.FD` <- function(x, i) x[i]
 rep.FD <- function(x, ...) as.FD(rep(unclass(x), ...))
 as.data.frame.FD <- function(x, ..., nm=deparse1(substitute(x))) {
