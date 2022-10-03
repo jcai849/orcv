@@ -14,14 +14,14 @@ as.Location.list <- function(x, ...) {
 	structure(x, class="Location")
 }
 as.Location.character <- function(x, port, ...) {
-        stopifnot(is.integer(port))
-        as.Location(.Call(C_loc_from_string, x, port))
+        as.Location(.Call(C_loc_from_string, x, as.integer(port)))
 }
 as.Location.integer <- function(x, port, ...) {
-        if (!missing(port)) x <- c(x, port)
+        if (!missing(port)) x <- c(x, as.integer(port))
         names(x) <- c("address", "port")
 	as.Location(list(x))
 }
+as.Location.numeric <- function(x, port, ...) as.Location(as.integer(x), as.integer(port), ...)
 is.Location <- function(x, ...) {
 	inherits(x, "Location")
 }

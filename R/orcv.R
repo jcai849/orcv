@@ -20,10 +20,8 @@ receive <- function(x, keep_conn=FALSE, simplify=TRUE, ...)  {
 }
 
 start <- function(address=NULL, port=0L, threads=getOption("orcv.cores", 4L)) {
-	stopifnot(is.character(address) || is.null(address),
-		  is.integer(port),
-		  is.integer(threads))
-	invisible(.Call(C_start, address, port, threads))
+	stopifnot(is.character(address) || is.null(address))
+	invisible(.Call(C_start, address, as.integer(port), as.integer(threads)))
 }
 
 fd <- function(x, ...) UseMethod("fd", x)
