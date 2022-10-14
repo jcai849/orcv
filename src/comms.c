@@ -89,8 +89,8 @@ Message *receive_message(int fd) /* error labels at end of function */
         socklen_t client_namelen = sizeof client_name;
 
 	getpeername(fd, (struct sockaddr *) &client_name, &client_namelen);
-	printf("Attempting to receive message from %s port %d over FD %d\n",
-	       inet_ntoa(client_name.sin_addr), ntohs(client_name.sin_port), fd);
+	TRACE(printf("Attempting to receive message from %s port %d over FD %d\n",
+	       inet_ntoa(client_name.sin_addr), ntohs(client_name.sin_port), fd));
 
         if (!(msg = malloc(sizeof(*msg)))) return NULL;
 
@@ -106,8 +106,8 @@ Message *receive_message(int fd) /* error labels at end of function */
         if (!(msg->payload = malloc(msg->payload_size))) goto error_second_alloc;
         if (receive_data(fd, msg->payload, msg->payload_size)) goto error_third_alloc;
 
-	printf("Received message from %s port %d over fd %d with header \"%s\"\n",
-	       inet_ntoa(client_name.sin_addr), ntohs(client_name.sin_port), fd, msg->header);
+	TRACE(printf("Received message from %s port %d over fd %d with header \"%s\"\n",
+	       inet_ntoa(client_name.sin_addr), ntohs(client_name.sin_port), fd, msg->header));
 
         return msg;
 
@@ -117,7 +117,7 @@ error_second_alloc:
 	free(msg->header);
 error_first_alloc:
 	close(fd);
-	printf("FD %d closed\n", fd);
+	TRACE(printf("FD %d closed\n", fd));
 	free(msg);
 	return NULL;
 }
@@ -157,14 +157,14 @@ int get_socket(int addr, int port)
         servaddr.sin_addr.s_addr = htonl(addr);
         do {
                 if_error((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1, -1);
-		printf("FD %d opened\n", sockfd);
+		TRACE(printf("FD %d opened\n", sockfd));
                 no_connect = connect(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
                 if (no_connect) {
                         perror(NULL);
                         if_error(fprintf(stderr, "Attempting reconnect to %s port %d (attempt #%d)\n",
 					 inet_ntoa(servaddr.sin_addr), port, ++reconnections) < 0, -1);
                         if_error(close(sockfd) == -1, -1);
-			printf("FD %d closed", sockfd);
+			TRACE(printf("FD %d closed", sockfd));
                         sleep(CONN_SLEEP);
                 }
         } while (no_connect);
@@ -195,8 +195,8 @@ int send_message(Message *msg)
 
 	if_error(getpeername(fd, (struct sockaddr *) &peername, &namelen), -1);
 	
-	printf("Attempting to send message with header \"%s\" to address %s port %d over fd %d\n",
-		msg->header, inet_ntoa(peername.sin_addr), ntohs(peername.sin_port), fd);
+	TRACE(printf("Attempting to send message with header \"%s\" to address %s port %d over fd %d\n",
+		msg->header, inet_ntoa(peername.sin_addr), ntohs(peername.sin_port), fd));
 
         if_error(send(fd, &msg->addr, sizeof msg->addr, 0) != sizeof msg->addr, -1);
         if_error(send(fd, &msg->port, sizeof msg->port, 0) != sizeof msg->port, -1);
@@ -205,7 +205,7 @@ int send_message(Message *msg)
         if_error(send(fd, &msg->payload_size, sizeof msg->payload_size, 0) != sizeof msg->payload_size, -1);
         if_error(send_data(fd, msg->payload, msg->payload_size) == -1, -1);
 	
-	printf("Message sent to %s port %d over fd %d\n", inet_ntoa(peername.sin_addr), ntohs(peername.sin_port), fd);
+	TRACE(printf("Message sent to %s port %d over fd %d\n", inet_ntoa(peername.sin_addr), ntohs(peername.sin_port), fd));
 
         return 0;
 }
@@ -220,7 +220,7 @@ int send_data(int sockfd, const void *data, int len)
                 if (n < 1) {
                         perror(NULL);
                         if_error(close(sockfd) == -1, -1);
-			printf("FD %d closed", sockfd);
+			TRACE(printf("FD %d closed", sockfd));
                         if_error(fprintf(stderr, "Failed to write (n=%d of %d) %s\n", n, need, (n == -1 && errno) ? strerror(errno) : ""
 ) < 0, -1);
                         return -1;

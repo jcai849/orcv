@@ -14,6 +14,14 @@
 #endif
 */
 
+#ifndef NDEBUG
+#define DEBUG 0
+#else
+#define DEBUG 1
+#endif
+
+#define TRACE(x) do { if (DEBUG) x; } while (0)
+
 typedef struct Message {
 	int fd;
         in_addr_t addr;
