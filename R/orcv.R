@@ -1,10 +1,15 @@
+ORCV_GLOBAL <- new.env(parent=emptyenv())
+ORCV_GLOBAL$STARTED <- FALSE
+
 header <- function(x, ...) UseMethod("header", x)
 payload <- function(x, ...) UseMethod("payload", x)
 send <- function(x, ...) {
+	stopifnot(ORCV_GLOBAL$STARTED)
 	stopifnot(length(x) > 0)
 	UseMethod("send", x)
 }
 receive <- function(x, keep_conn=FALSE, simplify=TRUE, ...)  {
+	stopifnot(ORCV_GLOBAL$STARTED)
 	if (missing(x)) {
 		next_msg <- .Call(C_next_message)
 		if (is.null(next_msg)) stop("receive error")
@@ -21,7 +26,9 @@ receive <- function(x, keep_conn=FALSE, simplify=TRUE, ...)  {
 
 start <- function(address=NULL, port=0L, threads=getOption("orcv.cores", 4L)) {
 	stopifnot(is.character(address) || is.null(address))
-	invisible(.Call(C_start, address, as.integer(port), as.integer(threads)))
+	res <- .Call(C_start, address, as.integer(port), as.integer(threads))
+	ORCV_GLOBAL$STARTED <- TRUE
+	invisible(res)
 }
 
 fd <- function(x, ...) UseMethod("fd", x)
