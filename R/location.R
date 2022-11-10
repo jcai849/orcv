@@ -30,7 +30,7 @@ rep.Location <- function(x, ...) {
 	as.Location(rep(unclass(x), ...))
 }
 c.Location <- function(...) {
-	as.Location(c(sapply(list(...), unclass)))
+	as.Location(do.call(c, lapply(list(...), unclass)))
 }
 
 # as per as.data.frame.raw etc.
