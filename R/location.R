@@ -11,6 +11,7 @@ location.integer <- function(x, ...) {
 }
 
 as.Location.list <- function(x, ...) {
+	if (!any(lengths(x))) x <- list()
 	structure(x, class="Location")
 }
 as.Location.character <- function(x, port, ...) {
@@ -22,6 +23,7 @@ as.Location.integer <- function(x, port, ...) {
 	as.Location(list(x))
 }
 as.Location.numeric <- function(x, port, ...) as.Location(as.integer(x), as.integer(port), ...)
+as.Location.NULL <- function(x, port, ...) location(0L)
 is.Location <- function(x, ...) {
 	inherits(x, "Location")
 }
