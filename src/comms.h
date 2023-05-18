@@ -4,21 +4,13 @@
 #include <stdio.h>
 #include <netinet/in.h>
 
-/*
-#ifdef DNDEBUG
-#define if_error(x, y) x
-# else
-*/
 #define if_error(x, y) if(x) {perror("error"); return y;}
-/*
-#endif
-*/
 
-#ifndef NDEBUG
+// #ifndef NDEBUG
 #define DEBUG 0
-#else
-#define DEBUG 1
-#endif
+// #else
+// #define DEBUG 1
+// #endif
 
 #define TRACE(x) do { if (DEBUG) x; } while (0)
 
