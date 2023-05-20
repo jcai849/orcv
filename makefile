@@ -5,7 +5,7 @@ install: R/orcv.R src/*.c src/*.h
 tags:
 	uctags -R
 test:
-	cd tests && tmux new-session \; source-file test.tmux
-	R -f tests/receive_multiple_fd.R
+	cd inst/dev-tests && tmux new-session \; source-file test.tmux
+	R -f inst/dev-tests/receive_multiple_fd.R
 flow: # e.g. make flow SYMBOL=C_multiplex
 	cflow -Tm $(SYMBOL) src/*.c | bash exec/tree2dotx | dot -Tsvg >$(SYMBOL)-flow.svg

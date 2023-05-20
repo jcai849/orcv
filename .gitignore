@@ -8,3 +8,4 @@ tags
 src/html
 .RData
 .Rhistory
+.vscode
