@@ -24,7 +24,7 @@ receive <- function(x, keep_conn=FALSE, simplify=TRUE, ...)  {
 	} else UseMethod("receive", x)
 }
 
-start <- function(address=NULL, port=0L, threads=getOption("orcv.cores", 4L)) {
+start <- function(address=NULL, port=0L, threads=getOption("largescalemessages.cores", 4L)) {
 	stopifnot(is.character(address) || is.null(address))
 	res <- .Call(C_start, address, as.integer(port), as.integer(threads))
 	ORCV_GLOBAL$STARTED <- TRUE

@@ -1,6 +1,6 @@
 N <- seq(10)
 sender <- function(n) {
-	library(orcv)
+	library(largescalemessages)
 	
 	msg <- paste("from", n)
 
@@ -10,7 +10,7 @@ sender <- function(n) {
 }
 for (n in N) parallel::mcparallel(sender(n), detached=T)
 
-library(orcv)
+library(largescalemessages)
 start("localhost", 12345L, threads=4L)
 
 msgs <- lapply(N, function(...) receive(keep_conn=T))
