@@ -1,4 +1,4 @@
-useDynLib(largescalemessages,
+useDynLib(orcv,
 	C_close_socket,
 	C_get_socket,
 	C_loc_from_string,

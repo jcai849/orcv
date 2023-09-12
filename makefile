@@ -1,6 +1,6 @@
 .PHONY: tags install clean tests
 all: install
-install: R/largescalemessages.R src/*.c src/*.h
+install: R/orcv.R src/*.c src/*.h
 	R CMD INSTALL .
 tags:
 	uctags -R
