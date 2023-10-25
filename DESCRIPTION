@@ -1,7 +1,7 @@
 Package: orcv
 Type: Package
 Title: Async Communicating Event Receiver
-Version: 1.0
+Version: 1.1
 Date: 2022-10-14
 Author: Jason Cairns
 Maintainer: <jason.cairns@auckland.ac.nz>
