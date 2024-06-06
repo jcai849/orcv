@@ -14,7 +14,6 @@ receive <- function(x, keep_conn=FALSE, simplify=TRUE, ...)  {
 		next_msg <- .Call(C_next_message)
 		if (is.null(next_msg)) stop("receive error")
 		msg <- as.Message(next_msg) 
-		cat(sprintf("Opening message with header \"%s\"\n", header(msg)))
 		if (!keep_conn) {
 			close(msg)
 			fd(msg) <- as.FD(-1L)
