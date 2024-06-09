@@ -1,0 +1,4 @@
+#!/bin/bash
+
+tmux new-session \; source-file test.tmux
+Rscript receive_multiple_fd.R

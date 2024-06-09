@@ -1,0 +1,4 @@
+#!/bin/bash
+
+SYMBOL=${1:-C_multiplex}
+cflow -Tm ${SYMBOL} src/*.c | bash exec/tree2dotx | dot -Tsvg >${SYMBOL}-flow.svg

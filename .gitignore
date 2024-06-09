@@ -10,3 +10,4 @@ src/html
 .Rhistory
 .vscode
 *.swp
+*.svg
