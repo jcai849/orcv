@@ -11,3 +11,6 @@ src/html
 .vscode
 *.swp
 *.svg
+.cache/clangd/index
+.direnv
+compile_commands.json
