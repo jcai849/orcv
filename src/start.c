@@ -61,9 +61,9 @@ void *listener(void *arg)
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_addr.s_addr = htonl(get_address());
 	serv_addr.sin_port = htons(get_port());
-        if_error((listenfd = socket(AF_INET, SOCK_STREAM, 0)) == -1, NULL);
-        if_error(setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1, NULL);
-        if_error(bind(listenfd, (struct sockaddr *) &serv_addr,  sizeof(serv_addr)) == -1, NULL);
+  if_error((listenfd = socket(AF_INET, SOCK_STREAM, 0)) == -1, NULL);
+  if_error(setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1, NULL);
+  if_error(bind(listenfd, (struct sockaddr *) &serv_addr,  sizeof(serv_addr)) == -1, NULL);
 	if_error(listen(listenfd, BACKLOG) == -1, NULL);
 
 	memset(&serv_addr, 0, sizeof serv_addr);
@@ -107,28 +107,30 @@ Message *next_background_message(void)
 	return (Message *) tsqueue_dequeue(&background_queue);
 }
 
-Message **foreground_messages(int *fds, int nfds)
-{
-	Message **msglist;
-	Message *msg;
-	struct ReceiverArgs *receiver_args;
-	int i, j;
-	
-	msglist = calloc(nfds, sizeof(*msglist));
-/* TODO: improve by selecting on fds and sending the readable ones first */
-	for (i=0; i<nfds; i++) {
-		msglist[i] = NULL;
-		receiver_args = malloc(sizeof(*receiver_args));
-                receiver_args->fd = fds[i];
-                receiver_args->out_queue = &foreground_queue;
-                tsqueue_enqueue(&recv_queue, receiver_args);
-        }
-	for (i=0; i<nfds; i++) {
-                msg = tsqueue_dequeue(&foreground_queue);
-		if (!msg) continue;
-		for (j=0; j<nfds; j++) if (msg->fd == fds[j]) break;
-		msglist[j] = msg;
-        }
+Message **foreground_messages(int *fds, int nfds) {
+  Message **msglist;
+  Message *msg;
+  struct ReceiverArgs *receiver_args;
+  int i, j;
 
-	return msglist;
+  msglist = calloc(nfds, sizeof(*msglist));
+  /* TODO: improve by selecting on fds and sending the readable ones first */
+  for (i = 0; i < nfds; i++) {
+    msglist[i] = NULL;
+    receiver_args = malloc(sizeof(*receiver_args));
+    receiver_args->fd = fds[i];
+    receiver_args->out_queue = &foreground_queue;
+    tsqueue_enqueue(&recv_queue, receiver_args);
+  }
+  for (i = 0; i < nfds; i++) {
+    msg = tsqueue_dequeue(&foreground_queue);
+    if (!msg)
+      continue;
+    for (j = 0; j < nfds; j++)
+      if (msg->fd == fds[j])
+        break;
+    msglist[j] = msg;
+  }
+
+  return msglist;
 }

@@ -33,27 +33,28 @@ void set_address(in_addr_t addr)
 	self_address = addr;
 }
 
-in_addr_t first_avail_iface(void)
-{
-        struct ifaddrs *ifap, *ifa;
-        in_addr_t addr;
+in_addr_t first_avail_iface(void) {
+  struct ifaddrs *ifap, *ifa;
+  in_addr_t addr;
 
-	getifaddrs(&ifap);
-        for (ifa = ifap; ifa; ifa = ifa->ifa_next) {
-                if (ifa->ifa_addr &&
-                    ifa->ifa_addr->sa_family == AF_INET) /* then we can cast to sockaddr_in: */
-                        if(((struct sockaddr_in *) ifa->ifa_addr)->sin_addr.s_addr != htonl(INADDR_LOOPBACK) &&
-                           ((struct sockaddr_in *) ifa->ifa_addr)->sin_addr.s_addr != htonl(INADDR_ANY)) {
-                                break;
-                }
-                if (!ifa->ifa_next) {
-                        perror("No interface found\n");
-                        return -1;
-                }
-        }
-        addr = ((struct sockaddr_in *) ifa->ifa_addr)->sin_addr.s_addr;
-        freeifaddrs(ifap);
-	return ntohl(addr);
+  getifaddrs(&ifap);
+  for (ifa = ifap; ifa; ifa = ifa->ifa_next) {
+    if (ifa->ifa_addr && ifa->ifa_addr->sa_family ==
+                             AF_INET) /* then we can cast to sockaddr_in: */
+      if (((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr !=
+              htonl(INADDR_LOOPBACK) &&
+          ((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr !=
+              htonl(INADDR_ANY)) {
+        break;
+      }
+    if (!ifa->ifa_next) {
+      perror("No interface found\n");
+      return -1;
+    }
+  }
+  addr = ((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr;
+  freeifaddrs(ifap);
+  return ntohl(addr);
 }
 
 in_addr_t address_from_string(const char *address, int port)
