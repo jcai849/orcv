@@ -14,3 +14,4 @@ src/html
 .cache/clangd/index
 .direnv
 compile_commands.json
+result

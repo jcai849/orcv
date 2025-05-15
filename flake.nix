@@ -50,7 +50,7 @@
 
       in
       {
-        orcv = orcv;
+        packages.default = orcv;
         devShell = pkgs.mkShell {
           buildInputs = with pkgs; [
             clang-tools
