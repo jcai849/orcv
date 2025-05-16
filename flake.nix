@@ -29,7 +29,7 @@
           text = "exec radian";
         };
 
-        genCompileCommands = pkgs.writeShellScriptBin "gen-compile-commands" ''
+        genCompileCommands = pkgs.writeShellScript "gen-compile-commands" ''
           mkdir -p src
           R_INCLUDE=$(R RHOME)/include
           CFLAGS=$(R CMD config CFLAGS)
@@ -54,16 +54,10 @@
         devShell = pkgs.mkShell {
           buildInputs = with pkgs; [
             clang-tools
-
             R_dev
             radian_dev_exec
           ];
-
-          shellHook = ''
-            ${genCompileCommands}
-            export MANPATH=${pkgs.clang-manpages}/share/man:$MANPATH
-          '';
-
+          shellHook = "${genCompileCommands}";
         };
       }
     );
