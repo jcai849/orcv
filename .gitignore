@@ -15,3 +15,5 @@ src/html
 .direnv
 compile_commands.json
 result
+..Rcheck
+symbols.rds
