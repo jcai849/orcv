@@ -1,0 +1,32 @@
+name: "Package checks"
+on:
+  pull_request:
+  push:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: cachix/install-nix-action@v31
+      with:
+        github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Run flake checks
+      run: nix flake check
+
+    - name: Enter dev shell and build package
+      run: nix develop --command R CMD build .
+
+    - name: Check the package and save logs
+      run: |
+        mkdir -p check-logs
+        nix develop --command R CMD check --as-cran *.tar.gz | tee check-logs/check.log
+
+    - name: Upload check logs
+      uses: actions/upload-artifact@v4
+      with:
+        name: r-cmd-check-logs
+        path: check-logs/
+
