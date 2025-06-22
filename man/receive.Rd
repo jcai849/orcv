@@ -1,5 +1,6 @@
 \name{receive}
 \alias{receive}
+\alias{receive.FD}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
 Receive external \pkg{orcv} communications
@@ -12,7 +13,7 @@ S3 method dispatching on \var{x}.
 }
 \usage{
 receive(x, keep_conn = FALSE, simplify = TRUE, ...)
-receive.FD(x, keep_conn=FALSE, simplify=TRUE,...)
+\method{receive}{FD}(x, keep_conn=FALSE, simplify=TRUE,...)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{

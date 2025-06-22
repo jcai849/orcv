@@ -1,5 +1,8 @@
 \name{send}
 \alias{send}
+\alias{send.Message}
+\alias{send.FD}
+\alias{send.character}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
 Send an R object to a remote location
@@ -10,15 +13,27 @@ Message objects encapsulate a payload along with an address, but other classes r
 }
 \usage{
 send(x, ...)
-send.Message(x, header, payload=NULL, keep_conn=FALSE, ...)
-send.FD(x, header, payload=NULL, keep_conn=FALSE, ...)
-send.character(x, port, header, payload=NULL, keep_conn=FALSE, ...) 
+\method{send}{Message}(x, header, payload=NULL, keep_conn=FALSE, ...)
+\method{send}{FD}(x, header, payload=NULL, keep_conn=FALSE, ...)
+\method{send}{character}(x, port, header, payload=NULL, keep_conn=FALSE, ...) 
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{x}{
 Destination, or object encapsulating one, serving as S3 dispatch.
 }
+  \item{header}{
+    character header
+  }
+  \item{payload}{
+    Object to send
+  }
+  \item{keep_conn}{
+    Boolean flag to keep connection open
+  }
+  \item{port}{
+    Integer port to bind to.
+  }
   \item{\dots}{
 Passed on to further methods.
 }
