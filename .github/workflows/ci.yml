@@ -1,0 +1,27 @@
+name: "Package checks"
+on:
+  pull_request:
+  push:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Nix
+      uses: cachix/install-nix-action@v31
+      with:
+        github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Run checks
+      run: |
+        nix flake check -v
+        nix build .#checks.x86_64-linux.default
+
+    - name: Upload check artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: check-artifacts
+        path: result/
+        retention-days: 30
