@@ -32,4 +32,4 @@ jobs:
       with:
         name: check-artifacts
         path: result/
-        retention-days: 30
+        retention-days: 14
