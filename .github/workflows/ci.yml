@@ -19,12 +19,13 @@ jobs:
 
     - name: Run checks
       run: |
-        nix flake check -v
+        nix flake check
         nix build .#checks.x86_64-linux.default
+        cat result/orcv.Rcheck/00check.log
 
     - name: Upload check artifacts
       uses: actions/upload-artifact@v4
       with:
         name: check-artifacts
-        path: result/
+        path: result/orcv.Rcheck/00check.log
         retention-days: 14
