@@ -50,6 +50,7 @@
               nativeBuildInputs = [
                 R_dev
                 tex
+                pkgs.html-tidy
               ];
               buildInputs = [ bundle ];
             }
