@@ -1,8 +1,8 @@
 Package: orcv
 Type: Package
 Title: Async Communicating Event Receiver
-Version: 1.1
-Date: 2022-10-14
+Version: 1.2
+Date: 2025-06-22
 Author: Jason Cairns
 Maintainer: Jason Cairns <jason.cairns@auckland.ac.nz>
 Description: Self-contained package that creates an event queue which can be responded to with long-running connections.
